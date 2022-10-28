@@ -1,0 +1,31 @@
+{
+	"folders": [
+		{
+			"name": "TwinCity",
+			"path": "."
+		},
+		{
+			"name": "UE5",
+			"path": "C:\\Program Files\\Epic Games\\UE_5.0"
+		}
+	],
+	"settings": {
+		"typescript.tsc.autoDetect": "off",
+		"files.associations": {
+			"*.ipp": "cpp",
+			"filesystem": "cpp",
+			"fstream": "cpp",
+			"chrono": "cpp",
+			"array": "cpp",
+			"vector": "cpp",
+			"xstring": "cpp",
+			"xutility": "cpp"
+		}
+	},
+	"extensions": {
+		"recommendations": [
+			"ms-vscode.cpptools",
+			"ms-dotnettools.csharp"
+		]
+	}
+}
