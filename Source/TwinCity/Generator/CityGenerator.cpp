@@ -1,16 +1,22 @@
 #include "CityGenerator.h"
 
+/*
+	TODO:
+		- GET x1, y1 & x2, y2 + create grid pattern of the neighbourhood
+		- GET my player location
+		- LOAD neighbourhood of my district
+		- GENERATE() my district when the player is closed
+*/
+
 /************************************************/
 /*                	BOLLARDS					*/
 /************************************************/
 
-void	ACityGenerator::_generateBollards()
+void	ACityGenerator::_generateBollards(TArray<FBollard> bollards)
 {
-	FGlobalBollards	*bol =  myBollards->FindRow<FGlobalBollards>(FName(TEXT("saintaugustin")), "My bollards", true);
-
-	for (int i = 0; i < bol->data.Num(); i++)
+	for (int i = 0; i < bollards.Num(); i++)
 	{
-		_setNewActor(bol->data[i].coordonnees, defaultValue, bollardActor);
+		_setNewActor(bollards[i].coordonnees, defaultValue, bollardActor);
 	}
 }
 
@@ -31,19 +37,18 @@ void	ACityGenerator::_spawnRoad(FVector const &v1, FVector const &v2, float cons
 	myActor->SetActorScale3D(newScale);
 }
 
-void	ACityGenerator::_generateRoads()
+void	ACityGenerator::_generateRoads(TArray<FRoad> roads)
 {
-	FGlobalRoads	*roads =  myRoads->FindRow<FGlobalRoads>(FName(TEXT("saintaugustin")), "My roads", true);
-	FVector			location, tmpLocation;
+	FVector	location, tmpLocation;
 
-	for (int i = 0; i < roads->data.Num(); i++)
+	for (int i = 0; i < roads.Num(); i++)
 	{
-		for (int j = 0; j < roads->data[i].coordonnees.Num(); j++)
+		for (int j = 0; j < roads[i].coordonnees.Num(); j++)
 		{
-			location = _getCoordLocation(i, j, roads);
+			location = _getCoordLocation(j, roads[i]);
 			// _spawnCoord(Location);
 			if (j > 0)
-				_spawnRoad(location, tmpLocation, roads->data[i].largeur_de_chaussee);
+				_spawnRoad(location, tmpLocation, roads[i].largeur_de_chaussee);
 				
 			tmpLocation = location;
 		}
@@ -54,13 +59,11 @@ void	ACityGenerator::_generateRoads()
 /*               TREES							*/
 /************************************************/
 
-void	ACityGenerator::_generateTrees()
+void	ACityGenerator::_generateTrees(TArray<FTree> trees)
 {
-	FGlobalTree	*trees =  myTrees->FindRow<FGlobalTree>(FName(TEXT("saintaugustin")), "My trees", true);
-
-	for (int i = 0; i < trees->data.Num(); i++)
+	for (int i = 0; i < trees.Num(); i++)
 	{
-		_setNewActor(trees->data[i].coordonnees, defaultValue, treeActor);
+		_setNewActor(trees[i].coordonnees, defaultValue, treeActor);
 		// _setNewActor(trees->data[i].coordonnees, trees->data[i].hauteurenm, treeActor);
 	}
 }
@@ -69,13 +72,11 @@ void	ACityGenerator::_generateTrees()
 /*               LIGHTS							*/
 /************************************************/
 
-void	ACityGenerator::_generateLights()
+void	ACityGenerator::_generateLights(TArray<FMyLight> lights)
 {
-	FGlobalLights	*lights =  myLights->FindRow<FGlobalLights>(FName(TEXT("saintaugustin")), "My lights", true);
-
-	for (int i = 0; i < lights->data.Num(); i++)
+	for (int i = 0; i < lights.Num(); i++)
 	{
-		_setNewActor(lights->data[i].coordonnees, lights->data[i].hauteur, lightActor);
+		_setNewActor(lights[i].coordonnees, lights[i].hauteur, lightActor);
 	}
 }
 
@@ -96,22 +97,21 @@ void		ACityGenerator::_spawnWall(FVector const &v1, FVector const &v2, float con
 	myActor->SetActorScale3D(newScale);
 }
 
-void	ACityGenerator::_generateBuildings()
+void	ACityGenerator::_generateBuildings(TArray<FBuilding> buildings)
 {
-	FGlobalBuildings	*buildings =  myBuildings->FindRow<FGlobalBuildings>(FName(TEXT("saintaugustin")), "My buildings", true);
-	FVector				location, tmpLocation;
+	FVector		location, tmpLocation;
 
 	//	for each buildings
-	for (int i = 0; i < buildings->data.Num(); i++)
+	for (int i = 0; i < buildings.Num(); i++)
 	{
 		//	for each vertices
-		for (int j = 0; j < buildings->data[i].coordonnees.Num(); j++)
+		for (int j = 0; j < buildings[i].coordonnees.Num(); j++)
 		{
-			location = _getCoordLocation(i, j, buildings);
-			_spawnCoord(location * scale + buildings->data[i].hauteur * FVector::UpVector * scale); // to change in prepare_data
+			location = _getCoordLocation(j, buildings[i]);
+			_spawnCoord(location * scale + buildings[i].hauteur * FVector::UpVector * scale); // to change in prepare_data
 			if (j > 0)
 			{
-				_spawnWall(location, tmpLocation, buildings->data[i].hauteur);	// to change in prepare_data
+				_spawnWall(location, tmpLocation, buildings[i].hauteur);	// to change in prepare_data
 			}
 			tmpLocation = location;
 		}
@@ -131,6 +131,27 @@ void	ACityGenerator::_spawnCoord(FVector const &location)
 /*                 COMMON						*/
 /************************************************/
 
+// GET x1, y1 & x2, y2 + create grid pattern of the neighbourhood
+
+// FMatrix2x2	ACityGenerator::_getBoundariesCoord(FDistrict const district)
+// {
+// 	FMatrix2x2	matrix;
+
+// }
+
+void	ACityGenerator::_drawDistrictsBoundaries() const
+{
+	TArray<FName>	rowNames = myDistrict->GetRowNames();
+
+	for (int i = 0; i < rowNames.Num(); i++)
+	{
+		UE_LOG(LogTemp, Display, TEXT("name: %s"), *(rowNames[i]).ToString());
+		//	_getDistrictCoord();
+		//	_spawnCoord();
+		//	_spawnWall(); -> with height == 1
+	}
+}
+
 void	ACityGenerator::_setNewActor(FCoordonnees coord, float height, TSubclassOf<AActor> actorToSpawn)
 {
 	FVector 	location = (FVector(coord.x, coord.y, 0.f) + offset) * scale;	
@@ -143,12 +164,23 @@ void	ACityGenerator::_setNewActor(FCoordonnees coord, float height, TSubclassOf<
 	myActor->SetActorScale3D(newScale);
 }
 
-bool	ACityGenerator::_checkAvailableData() const
+bool	ACityGenerator::_checkAvailableData(FDistrict const *district) const
 {
 	//	TODO: masque binaire pour checker en fonction du quartier
 	//	si les data necessaires existent bien
-
-	return myBuildings && myBollards && myRoads && myLights;
+	if (!myDistrict)
+		return false;
+	else if (!district)
+		return false;
+	else if (district->buildings.IsEmpty())
+		return false;
+	else if (district->roads.IsEmpty())
+		return false;
+	else if (district->bollards.IsEmpty())
+		return false;
+	else if (district->lights.IsEmpty())
+		return false;
+	return true;
 }
 
 ACityGenerator::ACityGenerator()
@@ -170,32 +202,36 @@ FRotator	ACityGenerator::_getNewRotation(FVector const &v1, FVector const &v2)
 
 //	change location * scale
 template	<class T>
-FVector		ACityGenerator::_getCoordLocation(int const i, int const j, T const *obj)
+FVector		ACityGenerator::_getCoordLocation(int const i, T const obj)
 {
-	FVector 	location = (FVector(obj->data[i].coordonnees[j].x, obj->data[i].coordonnees[j].y, 0.f) + offset); // to change in prepare_data
+	FVector 	location = (FVector(obj.coordonnees[i].x, obj.coordonnees[i].y, 0.f) + offset); // to change in prepare_data
 
 	return location;
 }
 
-void	ACityGenerator::_generate()
+void	ACityGenerator::_generate(FDistrict	*district)
 {
-	_generateBuildings();
-	_generateRoads();
-	_generateTrees();
-	_generateBollards();
-	_generateLights();
+	_drawDistrictsBoundaries();
+	// generate floor ?
+	_generateBuildings(district->buildings);
+	_generateRoads(district->roads);
+	_generateTrees(district->trees);
+	_generateBollards(district->bollards);
+	_generateLights(district->lights);
 }
 
 //	en fonction du masque binaire -> renvoyer les data necessaires
 //	manquantes
 //	TODO: map
-FString	ACityGenerator::_missingData()
+FString	ACityGenerator::_missingData(FDistrict const *district) const
 {
-	if (!myBuildings)
+	if (!district)
+		return ("myDistrict");
+	else if (district->buildings.IsEmpty())
 		return ("buildings");
-	else if (!myBollards)
+	else if (district->bollards.IsEmpty())
 		return ("bollards");
-	else if (!myLights)
+	else if (district->lights.IsEmpty())
 		return ("lights");
 	return ("roads");
 }
@@ -204,13 +240,40 @@ void ACityGenerator::BeginPlay()
 {
 	Super::BeginPlay();
 
-	if (!_checkAvailableData())
+	// LOAD only one district
+
+	// if (myChoice == "")
+	// {
+	// 	UE_LOG(LogTemp, Error, TEXT("No district"));
+	// 	return ;
+	// }
+	
+	// FDistrict	*district = myDistrict->FindRow<FDistrict>(myChoice, "My district", true);
+
+	// if (!_checkAvailableData(district))
+	// {
+	// 	FString errorMsg = _missingData(district);
+	// 	UE_LOG(LogTemp, Error, TEXT("No %s data"), *errorMsg);
+	// 	return;
+	// }
+	// _generate(district);
+
+	// LOAD every districts
+	TArray<FName>	rowNames = myDistrict->GetRowNames();
+
+	for (int i = 0; i < rowNames.Num(); i++)
 	{
-		FString errorMsg = _missingData();
-		UE_LOG(LogTemp, Error, TEXT("No %s data"), *errorMsg);
-		return;
+		UE_LOG(LogTemp, Display, TEXT("DISTRICT name: %s"), *(rowNames[i]).ToString());
+		FDistrict	*district = myDistrict->FindRow<FDistrict>((rowNames[i]), "My district", true);
+
+		if (!_checkAvailableData(district))
+		{
+			FString errorMsg = _missingData(district);
+			UE_LOG(LogTemp, Error, TEXT("No %s data"), *errorMsg);
+			return;
+		}
+		_generate(district);
 	}
-	_generate();
 }
 
 void ACityGenerator::Tick(float DeltaTime)

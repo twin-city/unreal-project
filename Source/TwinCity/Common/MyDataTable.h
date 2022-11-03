@@ -42,7 +42,7 @@ struct FWalls: public FTableRowBase
 };
 
 USTRUCT(BlueprintType)
-struct FBuildings: public FTableRowBase
+struct FBuilding: public FTableRowBase
 {
 	GENERATED_BODY()
 
@@ -69,22 +69,6 @@ struct FBuildings: public FTableRowBase
 		TArray<FCoordonnees>	coordonnees;
 };
 
-USTRUCT(BlueprintType)
-struct FGlobalBuildings: public FTableRowBase
-{
-	GENERATED_BODY()
-
-	public:
-		UPROPERTY(EditAnywhere, BlueprintReadOnly)
-		TArray<FBuildings>	data;
-
-		UPROPERTY(EditAnywhere, BlueprintReadOnly)
-		TArray<FWalls>		artifacts;
-
-		UPROPERTY(EditAnywhere, BlueprintReadOnly)
-		TArray<FWalls>		walls;
-};
-
 /**************************/
 /*		BOLLARDS		  */
 /**************************/
@@ -99,15 +83,6 @@ struct FBollard: public FTableRowBase
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	FCoordonnees	coordonnees;
-};
-
-USTRUCT(BlueprintType)
-struct FGlobalBollards: public FTableRowBase
-{
-	GENERATED_BODY()
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly)
-	TArray<FBollard>	data;
 };
 
 /**************************/
@@ -129,15 +104,6 @@ struct FMyLight: public FTableRowBase
 	FCoordonnees	coordonnees;
 };
 
-USTRUCT(BlueprintType)
-struct FGlobalLights: public FTableRowBase
-{
-	GENERATED_BODY()
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly)
-	TArray<FMyLight>	data;
-};
-
 /**************************/
 /*		TREE			  */
 /**************************/
@@ -155,15 +121,6 @@ struct FTree: public FTableRowBase
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	FCoordonnees	coordonnees;
-};
-
-USTRUCT(BlueprintType)
-struct FGlobalTree: public FTableRowBase
-{
-	GENERATED_BODY()
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly)
-	TArray<FTree>	data;
 };
 
 /**************************/
@@ -189,12 +146,24 @@ struct FRoad: public FTableRowBase
 };
 
 USTRUCT(BlueprintType)
-struct FGlobalRoads: public FTableRowBase
+struct FDistrict: public FTableRowBase
 {
 	GENERATED_BODY()
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
-	TArray<FRoad>	data;
+	TArray<FBuilding>	buildings;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	TArray<FRoad>		roads;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	TArray<FMyLight>	lights;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	TArray<FBollard>	bollards;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	TArray<FTree>		trees;
 };
 
 /****************************************************/
