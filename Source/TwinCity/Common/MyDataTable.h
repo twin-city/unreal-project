@@ -114,10 +114,10 @@ struct FTree: public FTableRowBase
 	GENERATED_BODY()
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
-	int		hauteurenm;
+	int				hauteur;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
-	FString	libellefrancais;
+	FString			espece;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	FCoordonnees	coordonnees;
@@ -133,13 +133,13 @@ struct FRoad: public FTableRowBase
 	GENERATED_BODY()
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
-	FString		nom_1_gauche;
+	FString					nom_1_gauche;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
-	int			largeur_de_chaussee;
+	int						largeur_de_chaussee;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
-	FString		sens_de_circulation;
+	FString					sens_de_circulation;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	TArray<FCoordonnees>	coordonnees;

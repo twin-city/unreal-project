@@ -64,7 +64,7 @@ void	ACityGenerator::_generateTrees(TArray<FTree> trees)
 	for (int i = 0; i < trees.Num(); i++)
 	{
 		_setNewActor(trees[i].coordonnees, defaultValue, treeActor);
-		// _setNewActor(trees->data[i].coordonnees, trees->data[i].hauteurenm, treeActor);
+		// _setNewActor(trees->data[i].coordonnees, trees->data[i].hauteur, treeActor);
 	}
 }
 
@@ -259,6 +259,7 @@ void ACityGenerator::BeginPlay()
 	// _generate(district);
 
 	// LOAD every districts
+	//	generate with the district id
 	TArray<FName>	rowNames = myDistrict->GetRowNames();
 
 	for (int i = 0; i < rowNames.Num(); i++)
