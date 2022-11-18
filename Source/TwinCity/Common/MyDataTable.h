@@ -13,7 +13,7 @@
 /**************************/
 
 USTRUCT(BlueprintType)
-struct FCoordonnees: public FTableRowBase
+struct FCoordinates: public FTableRowBase
 {
 	GENERATED_BODY()
 
@@ -22,6 +22,7 @@ struct FCoordonnees: public FTableRowBase
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	float	y;
+
 };
 
 /**************************/
@@ -29,29 +30,23 @@ struct FCoordonnees: public FTableRowBase
 /**************************/
 
 USTRUCT(BlueprintType)
-struct FWalls: public FTableRowBase
-{
-	GENERATED_BODY()
-	
-	public:
-		UPROPERTY(EditAnywhere, BlueprintReadOnly)
-		FString					type;
-
-		UPROPERTY(EditAnywhere, BlueprintReadOnly)
-		TArray<FCoordonnees>	coordonnees;
-};
-
-USTRUCT(BlueprintType)
 struct FBuilding: public FTableRowBase
 {
 	GENERATED_BODY()
 
 	public:
+
+		// UPROPERTY(EditAnywhere, BlueprintReadOnly)
+		// FString					type;
+
+		UPROPERTY(EditAnywhere, BlueprintReadOnly)
+		TArray<FCoordinates>	coordinates;
+
 		UPROPERTY(EditAnywhere, BlueprintReadOnly)
 		FString					id;
 
 		UPROPERTY(EditAnywhere, BlueprintReadOnly)
-		float					annee_construction;
+		float					construction_year;
 
 		UPROPERTY(EditAnywhere, BlueprintReadOnly)
 		FString					mat_mur;
@@ -60,13 +55,7 @@ struct FBuilding: public FTableRowBase
 		FString					mat_toit;
 
 		UPROPERTY(EditAnywhere, BlueprintReadOnly)
-		float					hauteur;
-
-		UPROPERTY(EditAnywhere, BlueprintReadOnly)
-		FString					type;
-
-		UPROPERTY(EditAnywhere, BlueprintReadOnly)
-		TArray<FCoordonnees>	coordonnees;
+		float					height;
 };
 
 /**************************/
@@ -79,10 +68,10 @@ struct FBollard: public FTableRowBase
 	GENERATED_BODY()
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
-	FString			type;
+	FString					type;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
-	FCoordonnees	coordonnees;
+	TArray<FCoordinates>	coordinates;
 };
 
 /**************************/
@@ -95,13 +84,13 @@ struct FMyLight: public FTableRowBase
 	GENERATED_BODY()
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
-	FString			support;
+	FString					support;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
-	int				hauteur;
+	float					height;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
-	FCoordonnees	coordonnees;
+	TArray<FCoordinates>	coordinates;
 };
 
 /**************************/
@@ -114,13 +103,25 @@ struct FTree: public FTableRowBase
 	GENERATED_BODY()
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
-	int				hauteur;
+	FString					name;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
-	FString			espece;
+	FString					type;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
-	FCoordonnees	coordonnees;
+	FString					species;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	int						circumference;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	int						height;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	TArray<FCoordinates>	coordinates;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	FString					variety;
 };
 
 /**************************/
@@ -133,16 +134,49 @@ struct FRoad: public FTableRowBase
 	GENERATED_BODY()
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
-	FString					nom_1_gauche;
+	FString					type;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
-	int						largeur_de_chaussee;
+	TArray<FCoordinates>	coordinates;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
-	FString					sens_de_circulation;
+	FString					street_name;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
-	TArray<FCoordonnees>	coordonnees;
+	int						width;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	FString					traffic_direction;
+};
+
+USTRUCT(BlueprintType)
+struct FGeom: public FTableRowBase
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	FString					type;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	TArray<FCoordinates>	coordinates;
+};
+
+USTRUCT(BlueprintType)
+struct FNeighbor: public FTableRowBase
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	FString			name;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	int				district;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	int				id;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	FGeom			geom;
 };
 
 USTRUCT(BlueprintType)
@@ -151,10 +185,16 @@ struct FDistrict: public FTableRowBase
 	GENERATED_BODY()
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
-	TArray<FBuilding>	buildings;
+	TArray<int>			neighbors;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
-	TArray<FRoad>		roads;
+	FNeighbor			neighbor;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	TArray<FBuilding>	buildings;
+
+	// UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	// TArray<FRoad>		roads;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	TArray<FMyLight>	lights;

@@ -40,16 +40,19 @@ class TWINCITY_API ACityGenerator : public AActor
 		TSubclassOf<AActor>	lightActor;
 
 		UPROPERTY(EditAnywhere)
-		UDataTable	*myDistrict;
-
-		UPROPERTY(EditAnywhere)
-		FVector	offset = FVector::ZeroVector;
+		UDataTable	*myDistricts;
 
 		UPROPERTY(EditAnywhere)
 		float 	scale = 100.0f;
 
 		UPROPERTY(EditAnywhere)
 		FName	myChoice = "";
+
+		UPROPERTY(EditAnywhere, Category = Location)
+		FVector NewLocation = FVector::ZeroVector;
+
+		UPROPERTY(EditAnywhere, Category = Location)
+		FQuat NewRotation;
 
 	private:
 
@@ -61,16 +64,17 @@ class TWINCITY_API ACityGenerator : public AActor
 		/************************************************/
 		
 		void		_generate(FDistrict	*district);
-		void		_spawnCoord(FVector const &location);
 		FRotator	_getNewRotation(FVector const &v1, FVector const &v2);
 		FVector		_getMeanVector(FVector const &v1, FVector const &v2);
 		template	<class T>
 		FVector		_getCoordLocation(int const i, T const obj);
 		FString		_missingData(FDistrict const *district) const;
 		bool		_checkAvailableData(FDistrict const *district) const;
-		void		_setNewActor(FCoordonnees coord, float depth, TSubclassOf<AActor> actorToSpawn);
-		void		_drawDistrictsBoundaries() const;
-		FMatrix2x2	_getBoundariesCoord(FDistrict const district);
+		template	<class T>
+		void		_setNewActor(T const obj, float depth, TSubclassOf<AActor> actorToSpawn);
+		template	<class T>
+		AActor		*_spawnObj(FVector const &location, T const objActor);
+		void		_drawDistrictsBoundaries(FGeom geom);
 
 		/************************************************/
 		/*               BUILDINGS						*/
@@ -84,8 +88,8 @@ class TWINCITY_API ACityGenerator : public AActor
 		/*                 ROADS						*/
 		/************************************************/
 
-		void		_generateRoads(TArray<FRoad> roads);
-		void		_spawnRoad(FVector const &v1, FVector const &v2, const float height);
+		// void		_generateRoads(TArray<FRoad> roads);
+		// void		_spawnRoad(FVector const &v1, FVector const &v2, const float height);
 
 		/************************************************/
 		/*               TREES							*/
