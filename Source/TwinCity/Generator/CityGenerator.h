@@ -39,7 +39,7 @@ class TWINCITY_API ACityGenerator : public AActor
 		UPROPERTY(EditAnywhere)
 		TSubclassOf<AActor>	lightActor;
 
-		UPROPERTY(EditAnywhere)
+		UPROPERTY(EditAnywhere, BlueprintReadWrite)
 		UDataTable	*myDistricts;
 
 		UPROPERTY(EditAnywhere)
@@ -54,6 +54,9 @@ class TWINCITY_API ACityGenerator : public AActor
 		UPROPERTY(EditAnywhere, Category = Location)
 		FQuat NewRotation;
 
+		UFUNCTION(BlueprintCallable, Category = Generator)
+		void _generateFromDT(UDataTable* districtTable);
+
 	private:
 
 		const float	defaultValue = 1.0f;
@@ -63,7 +66,7 @@ class TWINCITY_API ACityGenerator : public AActor
 		/*                 COMMON						*/
 		/************************************************/
 		
-		void		_generate(FDistrict	*district);
+		void		_generateDistrict(FDistrict	*district);
 		FRotator	_getNewRotation(FVector const &v1, FVector const &v2);
 		FVector		_getMeanVector(FVector const &v1, FVector const &v2);
 		template	<class T>

@@ -155,9 +155,7 @@ bool	ACityGenerator::_checkAvailableData(FDistrict const *district) const
 {
 	//	TODO: masque binaire pour checker en fonction du quartier
 	//	si les data necessaires existent bien
-	if (!myDistricts)
-		return false;
-	else if (!district)
+	if (!district)
 		return false;
 	else if (district->buildings.IsEmpty())
 		return false;
@@ -194,7 +192,7 @@ FVector		ACityGenerator::_getCoordLocation(int const i, T const obj)
 	return location;
 }
 
-void	ACityGenerator::_generate(FDistrict	*district)
+void	ACityGenerator::_generateDistrict(FDistrict	*district)
 {
 	_drawDistrictsBoundaries(district->neighbor.geom);
 	// generate floor ?
@@ -222,44 +220,36 @@ FString	ACityGenerator::_missingData(FDistrict const *district) const
 	return ("roads");
 }
 
-void ACityGenerator::BeginPlay()
+void ACityGenerator::_generateFromDT(UDataTable* districtTable)
 {
-	Super::BeginPlay();
+	if (!districtTable)
+	{
+		UE_LOG(LogTemp, Error, TEXT("No data table found"));
+		return;
+	}
 	
-	// LOAD only one district
-
-	// if (myChoice == "")
-	// {
-	// 	UE_LOG(LogTemp, Error, TEXT("No district"));
-	// 	return ;
-	// }
-	
-	// FDistrict	*district = myDistricts->FindRow<FDistrict>(myChoice, "My districts", true);
-
-	// if (!_checkAvailableData(district))
-	// {
-	// 	FString errorMsg = _missingData(district);
-	// 	UE_LOG(LogTemp, Error, TEXT("No %s data"), *errorMsg);
-	// 	return;
-	// }
-	// _generate(district);
-
-	// LOAD every districts
-		// generate with the district id
-	TArray<FName>	rowNames = myDistricts->GetRowNames();
+	TArray<FName>	rowNames = districtTable->GetRowNames();
 
 	for (int i = 0; i < rowNames.Num(); i++)
 	{
 		UE_LOG(LogTemp, Display, TEXT("DISTRICT name: %s"), *(rowNames[i]).ToString());
-		FDistrict	*district = myDistricts->FindRow<FDistrict>((rowNames[i]), "My district", true);
+		FDistrict	*district = districtTable->FindRow<FDistrict>((rowNames[i]), "My district", true);
 		if (!_checkAvailableData(district))
 		{
 			FString errorMsg = _missingData(district);
 			UE_LOG(LogTemp, Error, TEXT("No %s data"), *errorMsg);
 			return;
 		}
-		_generate(district);
+		_generateDistrict(district);
 	}
+}
+
+
+void ACityGenerator::BeginPlay()
+{
+	Super::BeginPlay();
+	
+	_generateFromDT(myDistricts);
 }
 
 void ACityGenerator::Tick(float DeltaTime)
