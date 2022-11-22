@@ -157,8 +157,8 @@ bool	ACityGenerator::_checkAvailableData(FDistrict const *district) const
 	//	si les data necessaires existent bien
 	if (!district)
 		return false;
-	else if (district->buildings.IsEmpty())
-		return false;
+	//else if (district->buildings.IsEmpty())
+	//	return false;
 	else if (district->bollards.IsEmpty())
 		return false;
 	else if (district->lights.IsEmpty())
@@ -194,7 +194,7 @@ FVector		ACityGenerator::_getCoordLocation(int const i, T const obj)
 
 void	ACityGenerator::_generateDistrict(FDistrict	*district)
 {
-	_drawDistrictsBoundaries(district->neighbor.geom);
+	_drawDistrictsBoundaries(district->geom);
 	// generate floor ?
 
 	_generateBuildings(district->buildings);

@@ -162,7 +162,7 @@ struct FGeom: public FTableRowBase
 };
 
 USTRUCT(BlueprintType)
-struct FNeighbor: public FTableRowBase
+struct FDistrict: public FTableRowBase
 {
 	GENERATED_BODY()
 
@@ -177,18 +177,9 @@ struct FNeighbor: public FTableRowBase
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	FGeom			geom;
-};
-
-USTRUCT(BlueprintType)
-struct FDistrict: public FTableRowBase
-{
-	GENERATED_BODY()
-
+	
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	TArray<int>			neighbors;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly)
-	FNeighbor			neighbor;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	TArray<FBuilding>	buildings;
