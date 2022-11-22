@@ -39,26 +39,23 @@ class TWINCITY_API ACityGenerator : public AActor
 		UPROPERTY(EditAnywhere)
 		TSubclassOf<AActor>	lightActor;
 
-		UPROPERTY(EditAnywhere)
-		UDataTable	*myBollards;
-
-		UPROPERTY(EditAnywhere)
-		UDataTable	*myBuildings;
-
-		UPROPERTY(EditAnywhere)
-		UDataTable	*myLights;
-
-		UPROPERTY(EditAnywhere)
-		UDataTable	*myRoads;
-
-		UPROPERTY(EditAnywhere)
-		UDataTable	*myTrees;
-
-		UPROPERTY(EditAnywhere)
-		FVector	offset = FVector::ZeroVector;
+		UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		UDataTable	*myDistricts;
 
 		UPROPERTY(EditAnywhere)
 		float 	scale = 100.0f;
+
+		UPROPERTY(EditAnywhere)
+		FName	myChoice = "";
+
+		UPROPERTY(EditAnywhere, Category = Location)
+		FVector NewLocation = FVector::ZeroVector;
+
+		UPROPERTY(EditAnywhere, Category = Location)
+		FQuat NewRotation;
+
+		UFUNCTION(BlueprintCallable, Category = Generator)
+		void _generateFromDT(UDataTable* districtTable);
 
 	private:
 
@@ -69,46 +66,49 @@ class TWINCITY_API ACityGenerator : public AActor
 		/*                 COMMON						*/
 		/************************************************/
 		
-		void		_generate();
-		void		_spawnCoord(FVector const &location);
+		void		_generateDistrict(FDistrict	*district);
 		FRotator	_getNewRotation(FVector const &v1, FVector const &v2);
 		FVector		_getMeanVector(FVector const &v1, FVector const &v2);
 		template	<class T>
-		FVector		_getCoordLocation(int const i, int const j, T const *obj);
-		FString		_missingData();
-		bool		_checkAvailableData() const;
-		void		_setNewActor(FCoordonnees coord, float depth, TSubclassOf<AActor> actorToSpawn);
+		FVector		_getCoordLocation(int const i, T const obj);
+		FString		_missingData(FDistrict const *district) const;
+		bool		_checkAvailableData(FDistrict const *district) const;
+		template	<class T>
+		void		_setNewActor(T const obj, float depth, TSubclassOf<AActor> actorToSpawn);
+		template	<class T>
+		AActor		*_spawnObj(FVector const &location, T const objActor);
+		void		_drawDistrictsBoundaries(FGeom geom);
 
 		/************************************************/
 		/*               BUILDINGS						*/
 		/************************************************/
 
-		void		_generateBuildings();
-		void		_generateWalls(FGlobalBuildings const *buildings);
+		void		_generateBuildings(TArray<FBuilding> buildings);
+		void		_generateWalls(FBuilding const *buildings);
 		void		_spawnWall(FVector const &v1, FVector const &v2, const float depth);
 
 		/************************************************/
 		/*                 ROADS						*/
 		/************************************************/
 
-		void		_generateRoads();
-		void		_spawnRoad(FVector const &v1, FVector const &v2, const float height);
+		// void		_generateRoads(TArray<FRoad> roads);
+		// void		_spawnRoad(FVector const &v1, FVector const &v2, const float height);
 
 		/************************************************/
 		/*               TREES							*/
 		/************************************************/
 		
-		void		_generateTrees();
+		void		_generateTrees(TArray<FTree> trees);
 
 		/************************************************/
 		/*               LIGHTS							*/
 		/************************************************/
 		
-		void		_generateLights();
+		void		_generateLights(TArray<FMyLight> lights);
 
 		/************************************************/
 		/*                 BOLLARDS						*/
 		/************************************************/
 
-		void		_generateBollards();
+		void		_generateBollards(TArray<FBollard> bollards);
 };
