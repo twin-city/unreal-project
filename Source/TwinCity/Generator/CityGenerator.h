@@ -74,18 +74,16 @@ class TWINCITY_API ACityGenerator : public AActor
 		FString		_missingData(FDistrict const *district) const;
 		bool		_checkAvailableData(FDistrict const *district) const;
 		template	<class T>
-		void		_setNewActor(T const obj, float depth, TSubclassOf<AActor> actorToSpawn);
-		template	<class T>
-		AActor		*_spawnObj(FVector const &location, T const objActor);
-		void		_drawDistrictsBoundaries(FGeom geom);
+		void		_setNewActor(T const obj, float depth, TSubclassOf<AActor> const &actorToSpawn, AActor* district);
+		void		_drawDistrictsBoundaries(FGeom const &geom, AActor* district);
 
 		/************************************************/
 		/*               BUILDINGS						*/
 		/************************************************/
 
-		void		_generateBuildings(TArray<FBuilding> buildings);
-		void		_generateWalls(FBuilding const *buildings);
-		void		_spawnWall(FVector const &v1, FVector const &v2, const float depth);
+		void		_generateBuildings(TArray<FBuilding> const &buildings, AActor* district);
+		void		_generateWalls(FBuilding const *buildings, AActor* district);
+		void		_spawnWall(FVector const &v1, FVector const &v2, const float depth, AActor* district);
 
 		/************************************************/
 		/*                 ROADS						*/
@@ -98,17 +96,17 @@ class TWINCITY_API ACityGenerator : public AActor
 		/*               TREES							*/
 		/************************************************/
 		
-		void		_generateTrees(TArray<FTree> trees);
+		void		_generateTrees(TArray<FTree> const &trees, AActor* district);
 
 		/************************************************/
 		/*               LIGHTS							*/
 		/************************************************/
 		
-		void		_generateLights(TArray<FMyLight> lights);
+		void		_generateLights(TArray<FMyLight> const &lights, AActor* district);
 
 		/************************************************/
 		/*                 BOLLARDS						*/
 		/************************************************/
 
-		void		_generateBollards(TArray<FBollard> bollards);
+		void		_generateBollards(TArray<FBollard> const &bollards, AActor* district);
 };
