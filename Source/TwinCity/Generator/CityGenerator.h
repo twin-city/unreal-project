@@ -89,8 +89,8 @@ class TWINCITY_API ACityGenerator : public AActor
 		/*                 ROADS						*/
 		/************************************************/
 
-		// void		_generateRoads(TArray<FRoad> roads);
-		// void		_spawnRoad(FVector const &v1, FVector const &v2, const float height);
+		void		_generateRoads(TArray<FRoad> const &roads, AActor* district);
+		void		_spawnRoad(FVector const &v1, FVector const &v2, const float depth, AActor* district);
 
 		/************************************************/
 		/*               TREES							*/

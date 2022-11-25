@@ -22,7 +22,9 @@ struct FCoordinates: public FTableRowBase
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	float	y;
-
+	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	float	z;
 };
 
 /**************************/
@@ -184,8 +186,8 @@ struct FDistrict: public FTableRowBase
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	TArray<FBuilding>	buildings;
 
-	// UPROPERTY(EditAnywhere, BlueprintReadOnly)
-	// TArray<FRoad>		roads;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	TArray<FRoad>	roads;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	TArray<FMyLight>	lights;

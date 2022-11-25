@@ -24,36 +24,41 @@ void	ACityGenerator::_generateBollards(TArray<FBollard> const &bollards, AActor*
 /*                 ROADS						*/
 /************************************************/
 
-// void	ACityGenerator::_spawnRoad(FVector const &v1, FVector const &v2, float const depth)
-// {
-// 	FVector		meanVector = FMath::Lerp(v1, v2, 0.5f) * scale;
-// 	meanVector.Z = defaultHeight;
-// 	FRotator	newRotation = _getNewRotation(v1, v2);
-// 	float		width = FVector::Dist(v1, v2);
-// 	//	checker si possible de spawn et rescale en meme temps
-// 	AActor		*myActor = GetWorld()->SpawnActor<AActor>(roadActor, meanVector, newRotation);
-// 	FVector		newScale = FVector(width, depth, defaultValue);
+void	ACityGenerator::_spawnRoad(FVector const &v1, FVector const &v2, float const depth, AActor* district)
+{
+	FVector		meanVector = FMath::Lerp(v1, v2, 0.5f) * scale;
+	
+	FRotator	newRotation = _getNewRotation(v1, v2);
+	float		width = FVector::Dist(v1, v2);
+	//	checker si possible de spawn et rescale en meme temps
+	AActor		*myActor = GetWorld()->SpawnActor<AActor>(roadActor, meanVector, newRotation);
+	FVector		newScale = FVector(width, depth, defaultValue);
 
-// 	myActor->SetActorScale3D(newScale);
-// }
+	myActor->SetActorScale3D(newScale);
+	
+	myActor->AttachToActor(district, FAttachmentTransformRules(EAttachmentRule::KeepWorld, false));
+}
 
-// void	ACityGenerator::_generateRoads(TArray<FRoad> roads)
-// {
-// 	FVector	location, tmpLocation;
+void	ACityGenerator::_generateRoads(TArray<FRoad> const &roads, AActor* district)
+{
+	FVector	location, tmpLocation;
 
-// 	for (int i = 0; i < roads.Num(); i++)
-// 	{
-// 		for (int j = 0; j < roads[i].coordinates.Num(); j++)
-// 		{
-// 			location = _getCoordLocation(j, roads[i]);
-// 			// _spawnCoord(Location);
-// 			if (j > 0)
-// 				_spawnRoad(location, tmpLocation, roads[i].largeur_de_chaussee);
-				
-// 			tmpLocation = location;
-// 		}
-// 	}
-// }
+	for (int i = 0; i < roads.Num(); i++)
+	{
+		const FRoad& road = roads[i];
+		for (int j = 0; j < roads[i].coordinates.Num(); j++)
+		{
+			const FCoordinates& coords = road.coordinates[j];
+			
+			location = FVector(coords.x, coords.y, 0.f);
+			
+			if (j != 0)
+				_spawnRoad(location, tmpLocation, roads[i].width, district);
+			
+			tmpLocation = location;
+		}
+	}
+}
 
 /************************************************/
 /*               TREES							*/
@@ -203,7 +208,7 @@ void	ACityGenerator::_generateDistrict(FDistrict	*district)
 
 
 	_generateBuildings(district->buildings, districtActor);
-	// // _generateRoads(district->roads);
+	_generateRoads(district->roads, districtActor);
 	_generateTrees(district->trees, districtActor);
 	_generateBollards(district->bollards, districtActor);
 	_generateLights(district->lights, districtActor);
@@ -218,6 +223,8 @@ FString	ACityGenerator::_missingData(FDistrict const *district) const
 		return ("myDistricts");
 	else if (district->buildings.IsEmpty())
 		return ("buildings");
+	else if (district->roads.IsEmpty())
+		return ("roads");
 	else if (district->bollards.IsEmpty())
 		return ("bollards");
 	else if (district->lights.IsEmpty())
