@@ -27,6 +27,33 @@ struct FCoordinates: public FTableRowBase
 	float	z;
 };
 
+USTRUCT(BlueprintType)
+struct FLinks: public FTableRowBase
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	int						district_id;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	TArray<FCoordinates>	coordinates;
+};
+
+USTRUCT(BlueprintType)
+struct FNeighborhood: public FTableRowBase
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	int				id;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	TArray<int>		neighbors;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	TArray<FLinks>	neighbor_links;
+};
+
 /**************************/
 /*		BUILDINGS		  */
 /**************************/
