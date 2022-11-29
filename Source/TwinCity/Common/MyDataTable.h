@@ -105,13 +105,7 @@ struct FTree: public FTableRowBase
 	GENERATED_BODY()
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
-	FString					name;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	FString					type;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly)
-	FString					species;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	int						circumference;
@@ -121,9 +115,6 @@ struct FTree: public FTableRowBase
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	TArray<FCoordinates>	coordinates;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly)
-	FString					variety;
 };
 
 /**************************/
@@ -169,16 +160,16 @@ struct FDistrict: public FTableRowBase
 	GENERATED_BODY()
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
-	FString			name;
+	FString				name;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
-	int				district;
+	int					district;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
-	int				id;
+	int					id;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
-	FGeom			geom;
+	FGeom				geom;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	TArray<int>			neighbors;
@@ -187,7 +178,7 @@ struct FDistrict: public FTableRowBase
 	TArray<FBuilding>	buildings;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
-	TArray<FRoad>	roads;
+	TArray<FRoad>		roads;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	TArray<FMyLight>	lights;

@@ -2,6 +2,8 @@
 
 #include "../Common/SceneDistrict.h"
 
+
+#include "Kismet/GameplayStatics.h" 
 /*
 	TODO:
 		- GET my player location
@@ -12,11 +14,11 @@
 /*                	BOLLARDS					*/
 /************************************************/
 
-void	ACityGenerator::_generateBollards(TArray<FBollard> const &bollards, AActor* district)
+void	ACityGenerator::_generateBollards(TArray<FBollard> const &bollards, AActor* district, FAssetTable *assets)
 {
 	for (int i = 0; i < bollards.Num(); i++)
 	{
-		_setNewActor(bollards[i], defaultValue, bollardActor, district);
+		_setNewActor(bollards[i], defaultValue, assets->bollardActor, district);
 	}
 }
 
@@ -24,14 +26,14 @@ void	ACityGenerator::_generateBollards(TArray<FBollard> const &bollards, AActor*
 /*                 ROADS						*/
 /************************************************/
 
-void	ACityGenerator::_spawnRoad(FVector const &v1, FVector const &v2, float const depth, AActor* district)
+void	ACityGenerator::_spawnRoad(FVector const &v1, FVector const &v2, float const depth, AActor* district, FAssetTable *assets)
 {
 	FVector		meanVector = FMath::Lerp(v1, v2, 0.5f) * scale;
 	
 	FRotator	newRotation = _getNewRotation(v1, v2);
 	float		width = FVector::Dist(v1, v2);
 	//	checker si possible de spawn et rescale en meme temps
-	AActor		*myActor = GetWorld()->SpawnActor<AActor>(roadActor, meanVector, newRotation);
+	AActor		*myActor = GetWorld()->SpawnActor<AActor>(assets->roadActor, meanVector, newRotation);
 	FVector		newScale = FVector(width, depth, defaultValue);
 
 	myActor->SetActorScale3D(newScale);
@@ -39,7 +41,7 @@ void	ACityGenerator::_spawnRoad(FVector const &v1, FVector const &v2, float cons
 	myActor->AttachToActor(district, FAttachmentTransformRules(EAttachmentRule::KeepWorld, false));
 }
 
-void	ACityGenerator::_generateRoads(TArray<FRoad> const &roads, AActor* district)
+void	ACityGenerator::_generateRoads(TArray<FRoad> const &roads, AActor* district, FAssetTable *assets)
 {
 	FVector	location, tmpLocation;
 
@@ -53,7 +55,7 @@ void	ACityGenerator::_generateRoads(TArray<FRoad> const &roads, AActor* district
 			location = FVector(coords.x, coords.y, 0.f);
 			
 			if (j != 0)
-				_spawnRoad(location, tmpLocation, roads[i].width, district);
+				_spawnRoad(location, tmpLocation, roads[i].width, district, assets);
 			
 			tmpLocation = location;
 		}
@@ -64,11 +66,11 @@ void	ACityGenerator::_generateRoads(TArray<FRoad> const &roads, AActor* district
 /*               TREES							*/
 /************************************************/
 
-void	ACityGenerator::_generateTrees(TArray<FTree> const &trees, AActor* district)
+void	ACityGenerator::_generateTrees(TArray<FTree> const &trees, AActor* district, FAssetTable *assets)
 {
 	for (int i = 0; i < trees.Num(); i++)
 	{
-		_setNewActor(trees[i], defaultValue, treeActor, district);
+		_setNewActor(trees[i], defaultValue, assets->treeActor, district);
 	}
 }
 
@@ -76,11 +78,11 @@ void	ACityGenerator::_generateTrees(TArray<FTree> const &trees, AActor* district
 /*               LIGHTS							*/
 /************************************************/
 
-void	ACityGenerator::_generateLights(TArray<FMyLight> const &lights, AActor* district)
+void	ACityGenerator::_generateLights(TArray<FMyLight> const &lights, AActor* district, FAssetTable *assets)
 {
 	for (int i = 0; i < lights.Num(); i++)
 	{
-		_setNewActor(lights[i], lights[i].height, lightActor, district);
+		_setNewActor(lights[i], lights[i].height, assets->lightActor, district);
 	}
 }
 
@@ -88,14 +90,14 @@ void	ACityGenerator::_generateLights(TArray<FMyLight> const &lights, AActor* dis
 /*               BUILDINGS						*/
 /************************************************/
 
-void		ACityGenerator::_spawnWall(FVector const &v1, FVector const &v2, float const height, AActor* district)
+void		ACityGenerator::_spawnWall(FVector const &v1, FVector const &v2, float const height, AActor* district, FAssetTable *assets)
 {
 	FVector		meanVector = FMath::Lerp(v1, v2, 0.5f) * scale;
 	//	TODO: a rechecker
 	meanVector.Z = height * scale / 2;
 	FRotator	newRotation = _getNewRotation(v1, v2);
 	float		width = FVector::Dist(v1, v2);
-	AActor		*myActor = GetWorld()->SpawnActor<AActor>(wallActor, meanVector, newRotation);
+	AActor		*myActor = GetWorld()->SpawnActor<AActor>(assets->wallActor, meanVector, newRotation);
 	FVector		newScale = FVector(width, 1.f, height);	// scale -> defaultDepth
 
 	myActor->SetActorScale3D(newScale);
@@ -103,7 +105,7 @@ void		ACityGenerator::_spawnWall(FVector const &v1, FVector const &v2, float con
 	myActor->AttachToActor(district, FAttachmentTransformRules(EAttachmentRule::KeepWorld, false));
 }
 
-void	ACityGenerator::_generateBuildings(TArray<FBuilding> const &buildings, AActor* district)
+void	ACityGenerator::_generateBuildings(TArray<FBuilding> const &buildings, AActor* district, FAssetTable *assets)
 {
 	FVector		location, tmpLocation;
 
@@ -117,7 +119,7 @@ void	ACityGenerator::_generateBuildings(TArray<FBuilding> const &buildings, AAct
 			// _spawnCoord(location * scale + buildings[i].height * FVector::UpVector * scale); // to change in prepare_data
 			if (j > 0)
 			{
-				_spawnWall(location, tmpLocation, buildings[i].height, district);	// to change in prepare_data
+				_spawnWall(location, tmpLocation, buildings[i].height, district, assets);	// to change in prepare_data
 			}
 			tmpLocation = location;
 		}
@@ -127,7 +129,7 @@ void	ACityGenerator::_generateBuildings(TArray<FBuilding> const &buildings, AAct
 /************************************************/
 /*                 COMMON						*/
 /************************************************/
-void	ACityGenerator::_drawDistrictsBoundaries(FGeom const &geom, AActor* district)
+void	ACityGenerator::_drawDistrictsBoundaries(FGeom const &geom, AActor* district, TSubclassOf<AActor> const &actorToSpawn)
 {
 	FVector location = FVector::ZeroVector;
 
@@ -135,7 +137,7 @@ void	ACityGenerator::_drawDistrictsBoundaries(FGeom const &geom, AActor* distric
 	{
 		location = _getCoordLocation(i, geom) * scale;
 		
-		AActor* bound = GetWorld()->SpawnActor<AActor>(coordActor, location, FRotator::ZeroRotator);
+		AActor* bound = GetWorld()->SpawnActor<AActor>(actorToSpawn, location, FRotator::ZeroRotator);
 		bound->AttachToActor(district, FAttachmentTransformRules(EAttachmentRule::KeepWorld, false));
 	}
 }
@@ -197,21 +199,20 @@ FVector		ACityGenerator::_getCoordLocation(int const i, T const obj)
 	return location;
 }
 
-void	ACityGenerator::_generateDistrict(FDistrict	*district)
+void	ACityGenerator::_generateDistrict(FDistrict	*district, FAssetTable *assets)
 {
 	ASceneDistrict* districtActor = GetWorld()->SpawnActor<ASceneDistrict>();
 	districtActor->Rename(*district->name, REN_None);
 	districtActor->SetActorLabel(district->name);
 
-	_drawDistrictsBoundaries(district->geom, districtActor);
+	_drawDistrictsBoundaries(district->geom, districtActor, assets->coordActor);
 	// generate floor ?
 
-
-	_generateBuildings(district->buildings, districtActor);
-	_generateRoads(district->roads, districtActor);
-	_generateTrees(district->trees, districtActor);
-	_generateBollards(district->bollards, districtActor);
-	_generateLights(district->lights, districtActor);
+	_generateBuildings(district->buildings, districtActor, assets);
+	// _generateRoads(district->roads, districtActor);
+	// _generateTrees(district->trees, districtActor);
+	// _generateBollards(district->bollards, districtActor);
+	// _generateLights(district->lights, districtActor);
 }
 
 //	en fonction du masque binaire -> renvoyer les data necessaires
@@ -232,44 +233,46 @@ FString	ACityGenerator::_missingData(FDistrict const *district) const
 	return ("roads");
 }
 
-void ACityGenerator::_generateFromDT(UDataTable* districtTable)
+void ACityGenerator::_generateFromDT()
 {
-	if (!districtTable)
+	if (!assetTable)
 	{
 		UE_LOG(LogTemp, Error, TEXT("No data table found"));
 		return;
 	}
-	
-	TArray<FName>	rowNames = districtTable->GetRowNames();
 
-	for (int i = 0; i < rowNames.Num(); i++)
+	FAssetTable				*assets = assetTable->FindRow<FAssetTable>((assetTable->GetRowNames())[0], "My assets", true);
+	TArray<UDataTable *>	districts = assets->districts;
+
+	for (int i = 0; i < districts.Num(); i++)
 	{
-		UE_LOG(LogTemp, Display, TEXT("DISTRICT name: %s"), *(rowNames[i]).ToString());
-		FDistrict	*district = districtTable->FindRow<FDistrict>((rowNames[i]), "My district", true);
+		UDataTable*		districtTable = districts[i];
+		TArray<FName>	districtName = districtTable->GetRowNames();
+		FDistrict		*district = districtTable->FindRow<FDistrict>((districtName[0]), "My district", true);
+		UE_LOG(LogTemp, Display, TEXT("DISTRICT name: %s"), *(districtName[0]).ToString());
+
 		if (!_checkAvailableData(district))
 		{
 			FString errorMsg = _missingData(district);
-			UE_LOG(LogTemp, Error, TEXT("No %s data"), *errorMsg);
+			UE_LOG(LogTemp, Error, TEXT("No %s data in %s district"), *errorMsg, *(districtName[0]).ToString());
 			return;
 		}
-		_generateDistrict(district);
+		_generateDistrict(district, assets);
 	}
 }
-
 
 void ACityGenerator::BeginPlay()
 {
 	Super::BeginPlay();
 	
-	_generateFromDT(myDistricts);
+	_generateFromDT();
 }
 
 void ACityGenerator::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 	
-	// FVector MyCharacter = GetWorld()->GetFirstPlayerController()->GetPawn()->GetActorLocation();
-	// UE_LOG(LogTemp, Display, TEXT("pos: %s"), *MyCharacter.ToString());
+	FVector MyCharacter = GetWorld()->GetFirstPlayerController()->GetPawn()->GetActorLocation();
+	UE_LOG(LogTemp, Display, TEXT("pos: %s"), *MyCharacter.ToString());
 
 }
-
