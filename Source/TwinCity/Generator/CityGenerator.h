@@ -3,10 +3,12 @@
 #pragma once
 
 #include "../Common/AssetTable.h" 
+#include "Components/CapsuleComponent.h" 
 #include "../Common/MyDataTable.h"
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
 #include "CityGenerator.generated.h"
+
 
 UCLASS()
 class TWINCITY_API ACityGenerator : public AActor
@@ -23,7 +25,10 @@ class TWINCITY_API ACityGenerator : public AActor
 		virtual void Tick(float DeltaTime) override;
 
 		UPROPERTY(EditAnywhere, BlueprintReadWrite)
-		UDataTable	*assetTable;
+		UDataTable				*assetTable;
+
+		UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		UDataTable				*cityTable;
 
 		UPROPERTY(EditAnywhere)
 		float 	scale = 100.0f;
@@ -39,6 +44,14 @@ class TWINCITY_API ACityGenerator : public AActor
 
 		UFUNCTION(BlueprintCallable, Category = Generator)
 		void _generateFromDT();
+
+		UPROPERTY(VisibleAnywhere, Category = "Trigger Capsule")
+    	class UCapsuleComponent* Trigger;
+
+		UPROPERTY(EditAnywhere)
+    	UStaticMeshComponent* Mesh;
+
+		float SphereRadius;
 
 	private:
 
@@ -59,6 +72,8 @@ class TWINCITY_API ACityGenerator : public AActor
 		template	<class T>
 		void		_setNewActor(T const obj, float depth, TSubclassOf<AActor> const &actorToSpawn, AActor* district);
 		void		_drawDistrictsBoundaries(FGeom const &geom, AActor* district, TSubclassOf<AActor> const &actorToSpawn);
+		void		_checkActorPosition();
+		bool		_isInDistrict(FVector pos);
 
 		/************************************************/
 		/*               BUILDINGS						*/
@@ -92,4 +107,5 @@ class TWINCITY_API ACityGenerator : public AActor
 		/************************************************/
 
 		void		_generateBollards(TArray<FBollard> const &bollards, AActor* district, FAssetTable *assets);
+
 };

@@ -219,18 +219,16 @@ struct FDistrict: public FTableRowBase
 
 /****************************************************/
 
-UCLASS()
-class TWINCITY_API AMyDataTable : public AActor
+USTRUCT(BlueprintType)
+struct TWINCITY_API FMyDataTable : public FTableRowBase
 {
 	GENERATED_BODY()
-	
-public:	
-	AMyDataTable();
 
-protected:
-	virtual void BeginPlay() override;
+	public:
+		UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		TArray<UDataTable *>	districts;
 
-public:	
-	virtual void Tick(float DeltaTime) override;
+		UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		UDataTable				*neighborhood;
 
 };

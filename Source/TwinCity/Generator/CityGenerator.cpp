@@ -129,6 +129,26 @@ void	ACityGenerator::_generateBuildings(TArray<FBuilding> const &buildings, AAct
 /************************************************/
 /*                 COMMON						*/
 /************************************************/
+
+bool	ACityGenerator::_isInDistrict(FVector pos)
+{
+	return true;
+}
+
+void ACityGenerator::_checkActorPosition()
+{
+	FVector	actorPosition = GetWorld()->GetFirstPlayerController()->GetPawn()->GetActorLocation();
+	
+	// UE_LOG(LogTemp, Display, TEXT("Actor position: %s"), *actorPosition.ToString());
+
+	if (!_isInDistrict(actorPosition))
+	{
+		UE_LOG(LogTemp, Display, TEXT("No longer in district"));
+		// _getNewDistrict(actorPosition);
+		// _generateDistrict(district, assets);
+	}
+}
+
 void	ACityGenerator::_drawDistrictsBoundaries(FGeom const &geom, AActor* district, TSubclassOf<AActor> const &actorToSpawn)
 {
 	FVector location = FVector::ZeroVector;
@@ -176,7 +196,6 @@ bool	ACityGenerator::_checkAvailableData(FDistrict const *district) const
 ACityGenerator::ACityGenerator()
 {
 	PrimaryActorTick.bCanEverTick = true;
-
 }
 
 FRotator	ACityGenerator::_getNewRotation(FVector const &v1, FVector const &v2)
@@ -210,9 +229,9 @@ void	ACityGenerator::_generateDistrict(FDistrict	*district, FAssetTable *assets)
 
 	_generateBuildings(district->buildings, districtActor, assets);
 	// _generateRoads(district->roads, districtActor);
-	// _generateTrees(district->trees, districtActor);
-	// _generateBollards(district->bollards, districtActor);
-	// _generateLights(district->lights, districtActor);
+	_generateTrees(district->trees, districtActor, assets);
+	_generateBollards(district->bollards, districtActor, assets);
+	_generateLights(district->lights, districtActor, assets);
 }
 
 //	en fonction du masque binaire -> renvoyer les data necessaires
@@ -235,26 +254,25 @@ FString	ACityGenerator::_missingData(FDistrict const *district) const
 
 void ACityGenerator::_generateFromDT()
 {
-	if (!assetTable)
+	if (!assetTable || !cityTable)
 	{
 		UE_LOG(LogTemp, Error, TEXT("No data table found"));
 		return;
 	}
 
-	FAssetTable				*assets = assetTable->FindRow<FAssetTable>((assetTable->GetRowNames())[0], "My assets", true);
-	TArray<UDataTable *>	districts = assets->districts;
+	FAssetTable		*assets = assetTable->FindRow<FAssetTable>((assetTable->GetRowNames())[0], "My assets", true);
+	FMyDataTable	*city = cityTable->FindRow<FMyDataTable>((cityTable->GetRowNames())[0], "My city", true);
 
-	for (int i = 0; i < districts.Num(); i++)
+	for (int i = 0; i < city->districts.Num(); i++)
 	{
-		UDataTable*		districtTable = districts[i];
-		TArray<FName>	districtName = districtTable->GetRowNames();
-		FDistrict		*district = districtTable->FindRow<FDistrict>((districtName[0]), "My district", true);
-		UE_LOG(LogTemp, Display, TEXT("DISTRICT name: %s"), *(districtName[0]).ToString());
-
+		FName		districtName = city->districts[i]->GetRowNames()[0];
+		FDistrict	*district = city->districts[i]->FindRow<FDistrict>((districtName), "My district", true);
+		
+		UE_LOG(LogTemp, Display, TEXT("DISTRICT name: %s"), *(districtName).ToString());
 		if (!_checkAvailableData(district))
 		{
 			FString errorMsg = _missingData(district);
-			UE_LOG(LogTemp, Error, TEXT("No %s data in %s district"), *errorMsg, *(districtName[0]).ToString());
+			UE_LOG(LogTemp, Error, TEXT("No %s data in %s district"), *errorMsg, *(districtName).ToString());
 			return;
 		}
 		_generateDistrict(district, assets);
@@ -271,8 +289,7 @@ void ACityGenerator::BeginPlay()
 void ACityGenerator::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
-	
-	FVector MyCharacter = GetWorld()->GetFirstPlayerController()->GetPawn()->GetActorLocation();
-	UE_LOG(LogTemp, Display, TEXT("pos: %s"), *MyCharacter.ToString());
+
+	_checkActorPosition();
 
 }

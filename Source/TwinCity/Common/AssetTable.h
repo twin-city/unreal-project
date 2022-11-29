@@ -32,11 +32,5 @@ struct TWINCITY_API FAssetTable : public FTableRowBase
 
 		UPROPERTY(EditAnywhere)
 		TSubclassOf<AActor>		lightActor;
-
-		UPROPERTY(EditAnywhere, BlueprintReadWrite)
-		TArray<UDataTable *>	districts;
-
-		UPROPERTY(EditAnywhere, BlueprintReadWrite)
-		UDataTable *			neighborhood;
 	
 };
