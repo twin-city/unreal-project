@@ -215,6 +215,9 @@ struct FDistrict: public FTableRowBase
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	TArray<FTree>		trees;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	bool				isConstructed = false;
 };
 
 /****************************************************/

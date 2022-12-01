@@ -6,6 +6,7 @@
 #include "Components/CapsuleComponent.h" 
 #include "../Common/MyDataTable.h"
 #include "CoreMinimal.h"
+#include "../Common/SceneDistrict.h"
 #include "GameFramework/Actor.h"
 #include "CityGenerator.generated.h"
 
@@ -42,8 +43,11 @@ class TWINCITY_API ACityGenerator : public AActor
 		UPROPERTY(EditAnywhere, Category = Location)
 		FQuat NewRotation;
 
+		UPROPERTY(EditAnywhere)
+    	FVector	offset;
+
 		UFUNCTION(BlueprintCallable, Category = Generator)
-		void _generateFromDT();
+		void _generateFromDT(UDataTable	*myCity);
 
 		UPROPERTY(VisibleAnywhere, Category = "Trigger Capsule")
     	class UCapsuleComponent* Trigger;
@@ -51,18 +55,26 @@ class TWINCITY_API ACityGenerator : public AActor
 		UPROPERTY(EditAnywhere)
     	UStaticMeshComponent* Mesh;
 
+		bool isConstructed = false;
+
 		float SphereRadius;
 
 	private:
 
-		const float	defaultValue = 1.0f;
-		const float defaultHeight = 50.0f;
-		
+		const float				defaultValue = 1.0f;
+		const float 			defaultHeight = 50.0f;
+		ASceneDistrict			*districtActor;
+		FAssetTable				*assets;
+		TArray<UDataTable *>	districtsTable;
+		TArray<FDistrict *>		districts;
+		FVector					originPos;
+		FVector					newPos;
+
 		/************************************************/
 		/*                 COMMON						*/
 		/************************************************/
 		
-		void		_generateDistrict(FDistrict	*district, FAssetTable *assets);
+		void		_generateDistrict(FDistrict	*district);
 		FRotator	_getNewRotation(FVector const &v1, FVector const &v2);
 		FVector		_getMeanVector(FVector const &v1, FVector const &v2);
 		template	<class T>
@@ -72,40 +84,39 @@ class TWINCITY_API ACityGenerator : public AActor
 		template	<class T>
 		void		_setNewActor(T const obj, float depth, TSubclassOf<AActor> const &actorToSpawn, AActor* district);
 		void		_drawDistrictsBoundaries(FGeom const &geom, AActor* district, TSubclassOf<AActor> const &actorToSpawn);
-		void		_checkActorPosition();
 		bool		_isInDistrict(FVector pos);
 
 		/************************************************/
 		/*               BUILDINGS						*/
 		/************************************************/
 
-		void		_generateBuildings(TArray<FBuilding> const &buildings, AActor* district, FAssetTable *assets);
+		void		_generateBuildings(TArray<FBuilding> const &buildings, AActor* district);
 		void		_generateWalls(FBuilding const *buildings, AActor* district);
-		void		_spawnWall(FVector const &v1, FVector const &v2, const float depth, AActor* district, FAssetTable *assets);
+		void		_spawnWall(FVector const &v1, FVector const &v2, const float depth, AActor* district);
 
 		/************************************************/
 		/*                 ROADS						*/
 		/************************************************/
 
-		void		_generateRoads(TArray<FRoad> const &roads, AActor* district, FAssetTable *assets);
-		void		_spawnRoad(FVector const &v1, FVector const &v2, float const depth, AActor* district, FAssetTable *assets);
+		void		_generateRoads(TArray<FRoad> const &roads, AActor* district);
+		void		_spawnRoad(FVector const &v1, FVector const &v2, float const depth, AActor* district);
 
 		/************************************************/
 		/*               TREES							*/
 		/************************************************/
 		
-		void		_generateTrees(TArray<FTree> const &trees, AActor* district, FAssetTable *assets);
+		void		_generateTrees(TArray<FTree> const &trees, AActor* district);
 
 		/************************************************/
 		/*               LIGHTS							*/
 		/************************************************/
 		
-		void		_generateLights(TArray<FMyLight> const &lights, AActor* district, FAssetTable *assets);
+		void		_generateLights(TArray<FMyLight> const &lights, AActor* district);
 
 		/************************************************/
 		/*                 BOLLARDS						*/
 		/************************************************/
 
-		void		_generateBollards(TArray<FBollard> const &bollards, AActor* district, FAssetTable *assets);
+		void		_generateBollards(TArray<FBollard> const &bollards, AActor* district);
 
 };
