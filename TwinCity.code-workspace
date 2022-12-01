@@ -20,7 +20,12 @@
 			"vector": "cpp",
 			"xstring": "cpp",
 			"xutility": "cpp",
-			"*.rh": "cpp"
+			"*.rh": "cpp",
+			"typeindex": "cpp",
+			"typeinfo": "cpp",
+			"future": "cpp",
+			"system_error": "cpp",
+			"xlocale": "cpp"
 		}
 	},
 	"extensions": {
