@@ -25,7 +25,9 @@
 			"typeinfo": "cpp",
 			"future": "cpp",
 			"system_error": "cpp",
-			"xlocale": "cpp"
+			"xlocale": "cpp",
+			"atomic": "cpp",
+			"bitset": "cpp"
 		}
 	},
 	"extensions": {

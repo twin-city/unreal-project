@@ -231,7 +231,7 @@ struct TWINCITY_API FMyDataTable : public FTableRowBase
 		UPROPERTY(EditAnywhere, BlueprintReadWrite)
 		TArray<UDataTable *>	districts;
 
-		UPROPERTY(EditAnywhere, BlueprintReadWrite)
-		UDataTable				*neighborhood;
+		// UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		// UDataTable				*neighborhood;
 
 };
