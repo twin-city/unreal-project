@@ -27,7 +27,9 @@
 			"system_error": "cpp",
 			"xlocale": "cpp",
 			"atomic": "cpp",
-			"bitset": "cpp"
+			"bitset": "cpp",
+			"__locale": "cpp",
+			"thread": "cpp"
 		}
 	},
 	"extensions": {

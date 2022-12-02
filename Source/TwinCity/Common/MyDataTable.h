@@ -215,9 +215,6 @@ struct FDistrict: public FTableRowBase
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	TArray<FTree>		trees;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly)
-	bool				isConstructed = false;
 };
 
 /****************************************************/
@@ -231,7 +228,7 @@ struct TWINCITY_API FMyDataTable : public FTableRowBase
 		UPROPERTY(EditAnywhere, BlueprintReadWrite)
 		TArray<UDataTable *>	districts;
 
-		// UPROPERTY(EditAnywhere, BlueprintReadWrite)
-		// UDataTable				*neighborhood;
+		UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		UDataTable				*neighborhood;
 
 };
