@@ -104,6 +104,22 @@ struct FBusShelter: public FTableRowBase
 };
 
 /**************************/
+/*  UNDERGROUND STATIONS  */
+/**************************/
+
+USTRUCT(BlueprintType)
+struct FUndergroundStation: public FTableRowBase
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	FString					type;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	TArray<FCoordinates>	coordinates;
+};
+
+/**************************/
 /*		BOLLARDS		  */
 /**************************/
 
@@ -234,6 +250,9 @@ struct FDistrict: public FTableRowBase
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	TArray<FBusShelter>	bus_shelters;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	TArray<FUndergroundStation>	underground_stations;
 };
 
 /****************************************************/
