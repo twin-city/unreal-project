@@ -32,5 +32,7 @@ struct TWINCITY_API FAssetTable : public FTableRowBase
 
 		UPROPERTY(EditAnywhere)
 		TSubclassOf<AActor>		lightActor;
-	
+
+		UPROPERTY(EditAnywhere)
+		TSubclassOf<AActor>		busShelterActor;
 };

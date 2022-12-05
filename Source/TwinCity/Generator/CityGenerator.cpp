@@ -160,6 +160,7 @@ void	ACityGenerator::_generateDistrict(FDistrict* district)
 	_generateObjects(district->lights, assets->lightActor);
 	_generateObjects(district->bollards, assets->bollardActor);
 	_generateObjects(district->trees, assets->treeActor);
+	// _generateObjects(district->bus_shelters, assets->busShelterActor);
 }
 
 void	ACityGenerator::_drawDistrictsBoundaries(FGeom const &geom, TSubclassOf<AActor> const &actorToSpawn)

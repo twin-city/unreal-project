@@ -88,6 +88,22 @@ struct FBuilding: public FTableRowBase
 };
 
 /**************************/
+/*	    BUS SHELTERS  	  */
+/**************************/
+
+USTRUCT(BlueprintType)
+struct FBusShelter: public FTableRowBase
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	FString					type;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	TArray<FCoordinates>	coordinates;
+};
+
+/**************************/
 /*		BOLLARDS		  */
 /**************************/
 
@@ -215,6 +231,9 @@ struct FDistrict: public FTableRowBase
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	TArray<FTree>		trees;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	TArray<FBusShelter>	bus_shelters;
 };
 
 /****************************************************/
