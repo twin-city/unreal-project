@@ -38,14 +38,20 @@ class TWINCITY_API ACityGenerator : public AActor
 		FName	choice = "";
 
 		UFUNCTION(BlueprintCallable, Category = Generator)
-		void _generateFromDT(UDataTable	*districtTable);
+		void _generateFromCityDT(UDataTable	*inputCityTable);
+
+		UFUNCTION(BlueprintCallable, Category = Generator)
+		void _generateNeighborhoodFromDT(FDistrict const &chosenDistrict);
+	
+		UFUNCTION(BlueprintCallable, Category = Generator)
+		void _generateNeighborhoodFromCityDT(FMyDataTable const& inputCityTable, FDistrict const &chosenDistrict);
 
 	private:
 
 		const float				defaultValue = 1.0f;
+		UPROPERTY()
 		ASceneDistrict			*districtActor;
 		FAssetTable				*assets;
-		FDistrict 				*district;
 		TArray<int>				neighborsId;
 
 		/************************************************/
@@ -53,9 +59,9 @@ class TWINCITY_API ACityGenerator : public AActor
 		/************************************************/
 		
 		/*			CHECK VALUE			*/
-		bool		_isInNeighborhood() const;
-		FString		_missingData() const;
-		bool		_checkAvailableData() const;
+		bool		_isInNeighborhood(FDistrict* district) const;
+		FString		_missingData(FDistrict* district) const;
+		bool		_checkAvailableData(FDistrict* district) const;
 
 		/*			GET VALUE			*/
 		FRotator	_getNewRotation(FVector const &v1, FVector const &v2);
@@ -63,14 +69,14 @@ class TWINCITY_API ACityGenerator : public AActor
 		FVector		_getCoordLocation(int const i, T const obj);
 		
 		/*			SET VALUE			*/
-		void		_generateDistrict();
+		void		_generateDistrict(FDistrict* district);
 		void		_drawDistrictsBoundaries(FGeom const &geom, TSubclassOf<AActor> const &actorToSpawn);
 		template	<class T>
 		void		_setNewActor(T const obj, float depth, TSubclassOf<AActor> const &actorToSpawn);
 		template	<class T>
 		void		_generateObjects(TArray<T> const &obj, TSubclassOf<AActor> const &actorToSpawn);
-		void		_setDistrictActor(UDataTable *newDistrict);
-		FDistrict	*_setChosenDistrict(FMyDataTable *city);
+		void		_setDistrictActor(FDistrict *newDistrict);
+		FDistrict	*_getChosenDistrict(FMyDataTable *city) const;
 
 		/************************************************/
 		/*               POPULATE						*/

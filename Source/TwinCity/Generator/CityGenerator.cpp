@@ -86,21 +86,16 @@ void	ACityGenerator::_generateRoads(TArray<FRoad> const &roads)
 
 /*			CHECK VALUE			*/
 
-bool	ACityGenerator::_isInNeighborhood() const
+bool	ACityGenerator::_isInNeighborhood(FDistrict* district) const
 {
-	if (neighborsId.Find(district->id) != INDEX_NONE)
-	{
-		return true;
-	}
-
-	return false;
+	return neighborsId.Find(district->id) != INDEX_NONE;
 }
 
 /*
 	en fonction du masque binaire -> renvoyer les data necessaires manquantes
 	TODO: map
 */
-FString	ACityGenerator::_missingData() const
+FString	ACityGenerator::_missingData(FDistrict* district) const
 {
 	if (!district)
 		return ("myDistricts");
@@ -119,7 +114,7 @@ FString	ACityGenerator::_missingData() const
 	TODO: masque binaire pour checker en fonction du quartier
 	si les data necessaires existent bien
 */
-bool	ACityGenerator::_checkAvailableData() const
+bool	ACityGenerator::_checkAvailableData(FDistrict* district) const
 {
 	if (!district)
 		return false;
@@ -158,7 +153,7 @@ FVector		ACityGenerator::_getCoordLocation(int const i, T const obj)
 
 /*			SET VALUE			*/
 
-void	ACityGenerator::_generateDistrict()
+void	ACityGenerator::_generateDistrict(FDistrict* district)
 {
 	_generateBuildings(district->buildings);
 	_generateRoads(district->roads);
@@ -206,67 +201,75 @@ void	ACityGenerator::_generateObjects(TArray<T> const &obj, TSubclassOf<AActor> 
 
 }
 
-void	ACityGenerator::_setDistrictActor(UDataTable *newDistrict)
+void	ACityGenerator::_setDistrictActor(FDistrict *newDistrict)
 {
-	FName			districtName = newDistrict->GetRowNames()[0];
+	if (!newDistrict)
+		return;
+	
+	FName			districtName = FName(newDistrict->name);
 
 	UE_LOG(LogTemp, Display, TEXT("District name: %s"), *districtName.ToString());
-
-	district = newDistrict->FindRow<FDistrict>((districtName), "My district", true);
+	
 	districtActor = GetWorld()->SpawnActor<ASceneDistrict>();
-	districtActor->Rename(*district->name, REN_None);
-	districtActor->SetActorLabel(district->name);
+	districtActor->Rename(*newDistrict->name, REN_None);
+	districtActor->SetActorLabel(newDistrict->name);
 }
 
-FDistrict	*ACityGenerator::_setChosenDistrict(FMyDataTable *city)
+FDistrict	*ACityGenerator::_getChosenDistrict(FMyDataTable *city) const
 {
-	FDistrict *chosenDistrict = nullptr;
-
 	for (int i = 0; i < city->districts.Num(); i++)
 	{
-		if ((chosenDistrict = city->districts[i]->FindRow<FDistrict>((choice), "My district", true)))	
-		{
-			neighborsId = chosenDistrict->neighbors;
-			break ;	
-		}
+		if (FDistrict* chosenDistrict = city->districts[i]->FindRow<FDistrict>((choice), "My district", true))
+			return chosenDistrict;
 	}
 
-	return chosenDistrict;
+	return nullptr;
+}
+
+void ACityGenerator::_generateNeighborhoodFromDT(FDistrict const &chosenDistrict)
+{
+	const FMyDataTable* cityData = cityTable->FindRow<FMyDataTable>((cityTable->GetRowNames())[0], "My city", true);
+
+	_generateNeighborhoodFromCityDT(*cityData, chosenDistrict);
+}
+
+void ACityGenerator::_generateNeighborhoodFromCityDT(FMyDataTable const &inputCityTable, FDistrict const &chosenDistrict)
+{
+	neighborsId = chosenDistrict.neighbors;
+	
+	assets = assetTable->FindRow<FAssetTable>((assetTable->GetRowNames())[0], "My assets", true);
+	
+	for (UDataTable* districtTable : inputCityTable.districts)
+	{
+		FDistrict* district = districtTable->FindRow<FDistrict>((districtTable->GetRowNames())[0], "My district", true);
+		
+		_setDistrictActor(district);
+
+		if (!_checkAvailableData(district))
+		{
+			FString errorMsg = _missingData(district);
+			return;
+		}
+		_drawDistrictsBoundaries(district->geom, assets->coordActor);
+		if (district->name == chosenDistrict.name || _isInNeighborhood(district))
+			_generateDistrict(district);
+	}
 }
 
 /*			MAIN FUNCTION			*/
 
-void ACityGenerator::_generateFromDT(UDataTable	*districtTable)
+void ACityGenerator::_generateFromCityDT(UDataTable	*inputCityTable)
 {
-	if (!assetTable || !districtTable)
+	if (!assetTable || !inputCityTable)
 	{
 		UE_LOG(LogTemp, Error, TEXT("No data table found"));
 		return;
 	}
 
-	FMyDataTable	*city = districtTable->FindRow<FMyDataTable>((districtTable->GetRowNames())[0], "My city", true);
-	FDistrict		*chosenDistrict = _setChosenDistrict(city);
-	
-	assets = assetTable->FindRow<FAssetTable>((assetTable->GetRowNames())[0], "My assets", true);
-	
-	if (!chosenDistrict)
+	if (FMyDataTable *city = inputCityTable->FindRow<FMyDataTable>((inputCityTable->GetRowNames())[0], "My city", true))
 	{
-		UE_LOG(LogTemp, Error, TEXT("%s district does not exist"), *choice.ToString());
-		return;
-	}
-
-	for (int i = 0; i < city->districts.Num(); i++)
-	{
-		_setDistrictActor(city->districts[i]);
-
-		if (!_checkAvailableData())
-		{
-			FString errorMsg = _missingData();
-			return;
-		}
-		_drawDistrictsBoundaries(district->geom, assets->coordActor);
-		if ((chosenDistrict && district->name == chosenDistrict->name) || _isInNeighborhood())
-			_generateDistrict();
+		if (FDistrict *chosenDistrict = _getChosenDistrict(city))
+			_generateNeighborhoodFromCityDT(*city, *chosenDistrict);
 	}
 }
 
@@ -276,7 +279,7 @@ void ACityGenerator::BeginPlay()
 {
 	Super::BeginPlay();
 	
-	_generateFromDT(cityTable);
+	_generateFromCityDT(cityTable);
 }
 
 void ACityGenerator::Tick(float DeltaTime)
