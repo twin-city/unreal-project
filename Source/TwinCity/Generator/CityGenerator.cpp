@@ -271,7 +271,9 @@ void ACityGenerator::_generateFromCityDT(UDataTable	*inputCityTable)
 	if (FMyDataTable *city = inputCityTable->FindRow<FMyDataTable>((inputCityTable->GetRowNames())[0], "My city", true))
 	{
 		if (FDistrict *chosenDistrict = _getChosenDistrict(city))
+		{
 			_generateNeighborhoodFromCityDT(*city, *chosenDistrict);
+		}
 	}
 }
 

@@ -7,12 +7,12 @@
 #include "../Common/MyDataTable.h"
 #include "CoreMinimal.h"
 #include "../Common/SceneDistrict.h"
-#include "GameFramework/Actor.h"
+#include "GameFramework/GameMode.h"
 #include "CityGenerator.generated.h"
 
 
 UCLASS()
-class TWINCITY_API ACityGenerator : public AActor
+class TWINCITY_API ACityGenerator : public AGameMode
 {
 	GENERATED_BODY()
 	
