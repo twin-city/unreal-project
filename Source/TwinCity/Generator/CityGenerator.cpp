@@ -1,9 +1,5 @@
 #include "CityGenerator.h"
 
-/*
-		GAME ART -> procedural building of roads + buildings
-*/
-
 /************************************************/
 /*               POPULATE						*/
 /************************************************/
