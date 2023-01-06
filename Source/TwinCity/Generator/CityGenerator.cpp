@@ -1,4 +1,6 @@
 #include "CityGenerator.h"
+#include "ZoneShapeActor.h"
+#include "ZoneShapeComponent.h"
 
 /************************************************/
 /*               POPULATE						*/
@@ -61,18 +63,27 @@ void	ACityGenerator::_generateRoads(TArray<FRoad> const &roads)
 
 	for (int i = 0; i < roads.Num(); i++)
 	{
+		AZoneShape *zoneShape = GetWorld()->SpawnActor<AZoneShape>();
+	
+		UZoneShapeComponent *shape = Cast<UZoneShapeComponent>(zoneShape->GetComponentByClass(UZoneShapeComponent::StaticClass()));
+	
+		TArray<FZoneShapePoint>& points = shape->GetMutablePoints();
+		
 		const FRoad& road = roads[i];
 		for (int j = 0; j < roads[i].coordinates.Num(); j++)
 		{
 			const FCoordinates& coords = road.coordinates[j];
 			
 			location = FVector(coords.x, coords.y, 0.5f);
+			points.Push(FZoneShapePoint(location));
 			
 			if (j != 0)
 				_spawnRoad(location, tmpLocation, roads[i].width);
 			
 			tmpLocation = location;
 		}
+
+		shape->UpdateShape();
 	}
 }
 
