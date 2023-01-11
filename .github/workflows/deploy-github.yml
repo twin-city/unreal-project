@@ -51,7 +51,7 @@ jobs:
     permissions:
       contents: read
       packages: write
-    if: github.ref == 'refs/heads/master'
+    #if: github.ref == 'refs/heads/master'
     #if: github.ref_type == 'tag' && github.ref == 'refs/heads/master'
     steps:
       -
