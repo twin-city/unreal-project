@@ -47,7 +47,7 @@ jobs:
   deploy:
     name: 🐋 Save docker image
     runs-on: ubuntu-latest
-    needs: check
+    #needs: check # TODO: UNCOMMENT THIS LINE IF YOU WANT TO STOP THE BUILD IF NO CHANGE IN Sources FOLDER
     permissions:
       contents: read
       packages: write
