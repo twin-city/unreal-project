@@ -68,6 +68,7 @@ void	ACityGenerator::_generateRoads(TArray<FRoad> const &roads)
 		UZoneShapeComponent *shape = Cast<UZoneShapeComponent>(zoneShape->GetComponentByClass(UZoneShapeComponent::StaticClass()));
 	
 		TArray<FZoneShapePoint>& points = shape->GetMutablePoints();
+		points.Empty();
 		
 		const FRoad& road = roads[i];
 		for (int j = 0; j < roads[i].coordinates.Num(); j++)
@@ -75,7 +76,8 @@ void	ACityGenerator::_generateRoads(TArray<FRoad> const &roads)
 			const FCoordinates& coords = road.coordinates[j];
 			
 			location = FVector(coords.x, coords.y, 0.5f);
-			points.Push(FZoneShapePoint(location));
+
+			points.Push(FZoneShapePoint(location * scale));
 			
 			if (j != 0)
 				_spawnRoad(location, tmpLocation, roads[i].width);
