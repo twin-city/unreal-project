@@ -23,13 +23,13 @@ The objective is to train AI models from this synthetic data, for example to det
 
 ### Requirements
 
-- [Unreal Engine 5.0.3](https://www.unrealengine.com/fr/unreal-engine-5)
+- [Unreal Engine 5.1](https://www.unrealengine.com/fr/unreal-engine-5)
 
 In your project, you will need to add:
 - [City Sample Crowds](https://www.unrealengine.com/marketplace/en-US/product/city-sample-crowds)
 - [City Sample Vehicles](https://www.unrealengine.com/marketplace/en-US/product/city-sample-vehicles)
 
-Create a Plugins folder at the root of your project and add the correct version of [EasySynth](https://github.com/ydrive/EasySynth/tree/ue5.0).
+Create a Plugins folder at the root of your project and add the correct version of [EasySynth](https://github.com/ydrive/EasySynth/tree/ue5.1).
 
 ### Configuration
 
