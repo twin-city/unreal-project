@@ -1,6 +1,8 @@
 #include "CityGenerator.h"
 #include "ZoneShapeActor.h"
 #include "ZoneShapeComponent.h"
+#include "Components/SplineComponent.h"
+#include "Components/SplineMeshComponent.h"
 
 /************************************************/
 /*               POPULATE						*/
@@ -63,29 +65,46 @@ void	ACityGenerator::_generateRoads(TArray<FRoad> const &roads)
 
 	for (int i = 0; i < roads.Num(); i++)
 	{
-		AZoneShape *zoneShape = GetWorld()->SpawnActor<AZoneShape>();
+		AActor *roadActor = GetWorld()->SpawnActor<AActor>(assets->roadActor);
 	
-		UZoneShapeComponent *shape = Cast<UZoneShapeComponent>(zoneShape->GetComponentByClass(UZoneShapeComponent::StaticClass()));
-	
+		UZoneShapeComponent *shape = Cast<UZoneShapeComponent>(roadActor->GetComponentByClass(UZoneShapeComponent::StaticClass()));
+		USplineComponent *spline = Cast<USplineComponent>(roadActor->GetComponentByClass(USplineComponent::StaticClass()));
+		
 		TArray<FZoneShapePoint>& points = shape->GetMutablePoints();
+		
+		spline->ClearSplinePoints();
 		points.Empty();
 		
 		const FRoad& road = roads[i];
-		for (int j = 0; j < roads[i].coordinates.Num(); j++)
+		for (int j = 0; j < road.coordinates.Num(); j++)
 		{
 			const FCoordinates& coords = road.coordinates[j];
 			
-			location = FVector(coords.x, coords.y, 0.5f);
+			location = FVector(coords.x, coords.y, 0.5f) * scale;
 
-			points.Push(FZoneShapePoint(location * scale));
-			
-			if (j != 0)
-				_spawnRoad(location, tmpLocation, roads[i].width);
-			
-			tmpLocation = location;
+			spline->AddSplinePoint(location, ESplineCoordinateSpace::World, true);
+
+			points.Push(FZoneShapePoint(location));
 		}
-
+		
 		shape->UpdateShape();
+
+		for (int p = 0; p < spline->GetNumberOfSplinePoints() - 2; p++)
+		{
+			USplineMeshComponent* splineMesh = NewObject<USplineMeshComponent>(roadActor, USplineMeshComponent::StaticClass());
+			splineMesh->RegisterComponent();
+			
+			splineMesh->SetForwardAxis(ESplineMeshAxis::X, true);
+			splineMesh->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+			
+			FVector currLocation = spline->GetLocationAtSplinePoint(p, ESplineCoordinateSpace::World);
+			FVector currTangent = spline->GetTangentAtSplinePoint(p, ESplineCoordinateSpace::World);
+
+			FVector nextLocation = spline->GetLocationAtSplinePoint(p + 1, ESplineCoordinateSpace::World);
+			FVector nextTangent = spline->GetTangentAtSplinePoint(p + 1, ESplineCoordinateSpace::World);
+
+			splineMesh->SetStartAndEnd(currLocation, currTangent, nextLocation, nextTangent);
+		}
 	}
 }
 
