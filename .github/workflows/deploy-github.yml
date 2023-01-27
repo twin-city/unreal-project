@@ -44,62 +44,18 @@ jobs:
           echo "One or more files in the Source folder has changed."
           echo "List all the files that have changed: ${{ steps.changed-files-specific.outputs.all_changed_files }}"
 
-  deploy:
-    name: 🐋 Save docker image
-    runs-on: ubuntu-latest
-    #needs: check # TODO: UNCOMMENT THIS LINE IF YOU WANT TO STOP THE BUILD IF NO CHANGE IN Sources FOLDER
-    permissions:
-      contents: read
-      packages: write
-    #if: github.ref == 'refs/heads/master'
-    #if: github.ref_type == 'tag' && github.ref == 'refs/heads/master'
+  start:
+    name: Start Scaleway VM
     steps:
-      -
-        uses: actions/checkout@v3
-      -
-        name: Set up QEMU
-        uses: docker/setup-qemu-action@v2
-      -
-        name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
-      -
-        name: Login to grcio
-        uses: docker/login-action@v2
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.MY_PAT_TOKEN }}
-      -
-        name: Extract metadata (tags, labels) for Docker
-        id: meta
-        uses: docker/metadata-action@v4
-        with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-${{ env.APPLICATION }}
-          flavor: |
-            latest=auto
-          tags: |
-            type=schedule
-            # branch event
-            type=ref,enable=true,priority=600,prefix=,suffix=,event=branch
-            # tag event
-            # type=ref,enable=true,priority=600,prefix=,suffix=,event=tag
-            # pull request event
-            type=ref,enable=true,priority=600,prefix=pr-,suffix=,event=pr
-            # push tag version of tagged branch
-            type=semver,pattern={{version}},event=tag
-            # set latest tag for master branch
-            type=raw,value=latest,enable=${{ github.ref == format('refs/heads/{0}', 'master') }}
-      -
-        name: Build and Push (latest)
-        uses: docker/build-push-action@v3
-        with:
-          context: .
-          platforms: linux/amd64
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          secrets: |
-            GIT_AUTH_TOKEN=${{ secrets.MY_PAT_TOKEN }}
-          build-args: |
-            APP_VERSION=${{ fromJSON(steps.meta.outputs.json).labels['org.opencontainers.image.version'] }}
+    - name: Create a new instance
+      uses: jawher/action-scw@v2.6.2
+      env:
+        SCW_ACCESS_KEY: ${{ secrets.SCW_ACCESS_KEY }}
+        SCW_SECRET_KEY: ${{ secrets.SCW_SECRET_KEY }}
+        SCW_ORGANIZATION_ID: ${{ secrets.SCW_ORGANIZATION_ID }}
+        SCW_ZONE: fr-par-1
+      with:
+        args: scw instance server create image= ${{ secrets.SCW_IMG_ID }}  type=PLAY2-PICO name=github-runner tags.0=cpu tags.1=unreal --wait -o=json
 
+    - name: Get instance id and expose it in INSTANCE_ID env var
+      run: echo ::set-env name=INSTANCE_ID::$(cat "${GITHUB_WORKSPACE}/scw.output" | jq -r '.id')
