@@ -11,13 +11,14 @@ users:
       groups: [ sudo ]
       shell: /bin/bash
       homedir: /home/ue5
-      sudo: ['ALL=(ALL) NOPASSWD:ALL'] 
+      sudo: ['ALL=(ALL) NOPASSWD:ALL']
 #packages:
 #  - blender
-#  - curl 
+#  - curl
 
 runcmd:
-  # On télécharge le package des github runners 
+  # On télécharge le package des github runners
+  # https://github.com/actions/runner/blob/main/docs/automate.md
   - curl -s https://raw.githubusercontent.com/actions/runner/main/scripts/create-latest-svc.sh | bash -s -- -s twin-city/unreal-project -n scw-runner -u ue5
   - 'mkdir -p /home/ue5/.ssh'
   - 'cp /root/.ssh/authorized_keys /home/ue5/.ssh/authorized_keys'
