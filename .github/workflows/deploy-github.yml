@@ -58,10 +58,9 @@ jobs:
         SCW_ORGANIZATION_ID: ${{ secrets.SCW_ORGANIZATION_ID }}
         SCW_ZONE: fr-par-2
       with:
-        args: instance server create image=ubuntu_bionic type=PLAY2-PICO name=scw-runner tags.0=cpu tags.1=unreal --wait -o=json
-
+        args: instance server list
     - name: Get instance id and expose it in INSTANCE_ID env var
-      run: echo ::set-env name=INSTANCE_ID::$(cat "${GITHUB_WORKSPACE}/scw.output" | jq -r '.id')
+      run: cat "${GITHUB_WORKSPACE}/scw.output"
 
   deploy:
     name: 🐋 Save docker image
