@@ -56,11 +56,13 @@ jobs:
           SCW_ACCESS_KEY: ${{ secrets.SCW_ACCESS_KEY }}
           SCW_SECRET_KEY: ${{ secrets.SCW_SECRET_KEY }}
           SCW_ORGANIZATION_ID: ${{ secrets.SCW_ORGANIZATION_ID }}
+          SCW_DEFAULT_PROJECT_ID: 0ea8ae99-4f7b-487f-93da-d8d457cdd25b
           SCW_ZONE: fr-par-2
           SCW_REGION: fr-par
+          SCW_INSECURE:
         with:
           #args: instance ip create -o=json
-          args: info
+          args: instance server create image=ubuntu_bionic type=PLAY2-PICO ip=none name=scw-runner tags.0=cpu tags.1=unreal --wait -o=json
       - name: Get server id and expose it in INSTANCE_ID env var
         run: echo ::set-env name=INSTANCE_ID::$(cat "${GITHUB_WORKSPACE}/scw.output" | jq -r '.id')
 
