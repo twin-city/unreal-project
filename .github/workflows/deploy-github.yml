@@ -51,7 +51,7 @@ jobs:
       #- name: cloud-init
       #  run: curl https://raw.githubusercontent.com/twin-city/unreal-project/feat/pixel-streaming-cd/cloudconfig.yml -o cloudconfig.yml
       - name: Create a new instance
-        uses: jawher/action-scw@v2.5.2
+        uses: jawher/action-scw@v2.5.4
         env:
           SCW_ACCESS_KEY: ${{ secrets.SCW_ACCESS_KEY }}
           SCW_SECRET_KEY: ${{ secrets.SCW_SECRET_KEY }}
