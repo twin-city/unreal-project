@@ -49,7 +49,7 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - name: cloud-init
-        run: curl https://raw.githubusercontent.com/twin-city/unreal-project/feat/pixel-streaming-cd/cloudconfig.yml -o cloudconfig.yml
+        run: curl https://raw.githubusercontent.com/twin-city/unreal-project/feat/pixel-streaming-cd/cloudconfig.yml -o $GITHUB_WORKSPACE/cloudconfig.yml
       - name: Create a new instance
         uses: jawher/action-scw@v2.6.2
         env:
@@ -62,7 +62,8 @@ jobs:
         with:
           args: instance server create image=7b992ef0-96a4-430f-b782-bc966fef27d0 cloud-init=@cloudconfig.yml type=PLAY2-PICO name=scw-runner tags.0=cpu tags.1=unreal --wait -o=json
       - name: Get instance id and expose it in INSTANCE_ID env var
-        run: echo ::set-env name=INSTANCE_ID::$(cat "${GITHUB_WORKSPACE}/scw.output" | jq -r '.id')
+        id: get_instance-id
+        run: echo $(cat "${GITHUB_WORKSPACE}/scw.output" | jq -r '.id') >> $INSTANCE_ID
 
   deploy:
     name: 🐋 Save docker image
