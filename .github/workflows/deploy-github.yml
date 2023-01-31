@@ -48,20 +48,19 @@ jobs:
     name: Start Scaleway VM
     runs-on: ubuntu-latest
     steps:
-    - name: cloud-init
-      run: curl https://raw.githubusercontent.com/twin-city/unreal-project/feat/pixel-streaming-cd/cloudconfig.yml -o cloudconfig.yml
-    - name: Create a new instance
-      uses: jawher/action-scw@v2.6.2
-      env:
-        SCW_ACCESS_KEY: ${{ secrets.SCW_ACCESS_KEY }}
-        SCW_SECRET_KEY: ${{ secrets.SCW_SECRET_KEY }}
-        SCW_ORGANIZATION_ID: ${{ secrets.SCW_ORGANIZATION_ID }}
-        SCW_DEFAULT_ORGANIZATION_ID: ${{ secrets.SCW_ORGANIZATION_ID }}
-        SCW_ZONE: fr-par-2
-      with:
-        args: instance ip create -o=json
-    - name: Get ip id and expose it in IP env var
-      run: echo ::set-env name=IP::$(cat "${GITHUB_WORKSPACE}/scw.output" | jq -r '.ip.address')
+      #- name: cloud-init
+      #  run: curl https://raw.githubusercontent.com/twin-city/unreal-project/feat/pixel-streaming-cd/cloudconfig.yml -o cloudconfig.yml
+      - name: Create a new instance
+        uses: jawher/action-scw@v2.5.2
+        env:
+          SCW_ACCESS_KEY: ${{ secrets.SCW_ACCESS_KEY }}
+          SCW_SECRET_KEY: ${{ secrets.SCW_SECRET_KEY }}
+          SCW_ORGANIZATION_ID: ${{ secrets.SCW_ORGANIZATION_ID }}
+          SCW_ZONE: fr-par-2
+        with:
+          args: instance ip create -o=json
+      - name: Get ip id and expose it in IP env var
+        run: echo ::set-env name=IP::$(cat "${GITHUB_WORKSPACE}/scw.output" | jq -r '.ip.address')
 
   deploy:
     name: 🐋 Save docker image
