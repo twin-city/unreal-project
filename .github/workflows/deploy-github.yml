@@ -58,7 +58,10 @@ jobs:
           sudo curl -o /usr/local/bin/scw -L "https://github.com/scaleway/scaleway-cli/releases/download/v${VERSION}/scaleway-cli_${VERSION}_linux_amd64"
           # Allow executing file as program
           sudo chmod +x /usr/local/bin/scw
-          echo ${{ secrets.SCW_CONFIG }} > $HOME/.config/scw/config.yaml
+          echo $SCW_CONFIG &gt;&gt; $HOME/.config/scw/config.yaml
+        shell: bash
+        env:
+          SCW_CONFIG : ${{secrets.SCW_CONFIG}}
       - name: Create a new instance
         run: |
          scw instance server create image=ubuntu_bionic type=PLAY2-PICO name=scw-runner tags.0=cpu tags.1=unreal --wait -o=json > ${GITHUB_WORKSPACE}/scw.output
