@@ -59,7 +59,7 @@ jobs:
           SCW_ZONE: fr-par-2
         with:
           #args: instance ip create -o=json
-          args: info
+          args: instance server list
       - name: Get ip id and expose it in IP env var
         run: echo ::set-env name=IP::$(cat "${GITHUB_WORKSPACE}/scw.output" | jq -r '.ip.address')
 
