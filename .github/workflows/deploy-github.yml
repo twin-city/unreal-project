@@ -60,7 +60,7 @@ jobs:
           SCW_REGION: fr-par
         with:
           #args: instance ip create -o=json
-          args: instance ip list
+          args: instance server create image=ubuntu_bionic type=PLAY2-PICO name=scw-runner tags.0=cpu tags.1=unreal --wait -o=json
       - name: Get ip id and expose it in IP env var
         run: echo ::set-env name=IP::$(cat "${GITHUB_WORKSPACE}/scw.output" | jq -r '.ip.address')
 
