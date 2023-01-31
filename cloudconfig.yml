@@ -8,10 +8,8 @@ package_upgrade: true
 users:
    - default
    - name: ue5
-      groups: sudo
-      shell: /bin/bash
-      homedir: /home/ue5
-      sudo: ['ALL=(ALL) NOPASSWD:ALL']
+     shell: /bin/bash
+     sudo: ['ALL=(ALL) NOPASSWD:ALL']
 #packages:
 #  - blender
 #  - curl
