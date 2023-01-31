@@ -8,7 +8,7 @@ package_upgrade: true
 users:
    - default
    - name: ue5
-      groups: [ sudo ]
+      groups: sudo
       shell: /bin/bash
       homedir: /home/ue5
       sudo: ['ALL=(ALL) NOPASSWD:ALL']
