@@ -48,8 +48,8 @@ jobs:
     name: Start Scaleway VM
     runs-on: ubuntu-22.04
     steps:
-      #- name: cloud-init
-      #  run: curl https://raw.githubusercontent.com/twin-city/unreal-project/feat/pixel-streaming-cd/cloudconfig.yml -o cloudconfig.yml
+      - name: cloud-init
+        run: curl https://raw.githubusercontent.com/twin-city/unreal-project/feat/pixel-streaming-cd/cloudconfig.yml -o cloudconfig.yml
       - name: Create a new instance
         uses: jawher/action-scw@v2.6.2
         env:
@@ -59,11 +59,9 @@ jobs:
           SCW_DEFAULT_PROJECT_ID: 0ea8ae99-4f7b-487f-93da-d8d457cdd25b
           SCW_ZONE: fr-par-2
           SCW_REGION: fr-par
-          SCW_INSECURE:
         with:
-          #args: instance ip create -o=json
-          args: instance server create image=ubuntu_bionic type=PLAY2-PICO ip=none name=scw-runner tags.0=cpu tags.1=unreal --wait -o=json
-      - name: Get server id and expose it in INSTANCE_ID env var
+          args: instance server create image=7b992ef0-96a4-430f-b782-bc966fef27d0 cloud-init=@cloudconfig.yml type=PLAY2-PICO name=scw-runner tags.0=cpu tags.1=unreal --wait -o=json
+      - name: Get instance id and expose it in INSTANCE_ID env var
         run: echo ::set-env name=INSTANCE_ID::$(cat "${GITHUB_WORKSPACE}/scw.output" | jq -r '.id')
 
   deploy:
