@@ -50,19 +50,20 @@ jobs:
     steps:
       #- name: cloud-init
       #  run: curl https://raw.githubusercontent.com/twin-city/unreal-project/feat/pixel-streaming-cd/cloudconfig.yml -o cloudconfig.yml
+      - name: Install the CLI
+        run: |
+          # Check out the latest release available on github <https://github.com/scaleway/scaleway-cli/releases/latest>
+          VERSION="2.5.4"
+          # Download the release from github
+          sudo curl -o /usr/local/bin/scw -L "https://github.com/scaleway/scaleway-cli/releases/download/v${VERSION}/scaleway-cli_${VERSION}_linux_amd64"
+          # Allow executing file as program
+          chmod +x /usr/local/bin/scw
+          echo ${{ secrets.SCW_CONFIG }} > $HOME/.config/scw/config.yaml
       - name: Create a new instance
-        uses: jawher/action-scw@v2.6.2
-        env:
-          SCW_ACCESS_KEY: ${{ secrets.SCW_ACCESS_KEY }}
-          SCW_SECRET_KEY: ${{ secrets.SCW_SECRET_KEY }}
-          SCW_ORGANIZATION_ID: ${{ secrets.SCW_ORGANIZATION_ID }}
-          SCW_ZONE: fr-par-2
-          SCW_REGION: fr-par
-        with:
-          #args: instance ip create -o=json
-          args: instance server create image=ubuntu_bionic type=PLAY2-PICO name=scw-runner tags.0=cpu tags.1=unreal --wait -o=json
-      - name: Get ip id and expose it in IP env var
-        run: echo ::set-env name=IP::$(cat "${GITHUB_WORKSPACE}/scw.output" | jq -r '.ip.address')
+        run: |
+         scw instance server create image=ubuntu_bionic type=PLAY2-PICO name=scw-runner tags.0=cpu tags.1=unreal --wait -o=json > ${GITHUB_WORKSPACE}/scw.output
+      - name: Get instance id and expose it in INSTANCE_ID env var
+        run: echo ::set-env name=INSTANCE_ID::$(cat "${GITHUB_WORKSPACE}/scw.output" | jq -r '.id')
 
   deploy:
     name: 🐋 Save docker image
