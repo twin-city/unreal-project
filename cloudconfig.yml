@@ -28,7 +28,7 @@ runcmd:
   - 'chown ue5 /home/ue5/.ssh/authorized_keys'
   # On se place dans le dossier de l'utilisateur
   - cd /home/ue5
-  - curl -s https://raw.githubusercontent.com/actions/runner/main/scripts/create-latest-svc.sh | bash -s -- -s twin-city/unreal-project -n scw-runner -u ue5
+  - RUNNER_CFG_PAT=$RUNNER_CFG_PAT | curl -s https://raw.githubusercontent.com/actions/runner/main/scripts/create-latest-svc.sh | bash -s -- -s twin-city/unreal-project -n scw-runner -u ue5
 
   #- git clone https://github.com/twin-city/unreal-project
   # On télécharge les fichiers de travail

@@ -45,7 +45,7 @@ jobs:
           echo "List all the files that have changed: ${{ steps.changed-files-specific.outputs.all_changed_files }}"
 
   start:
-    name: Start Scaleway VM with scw-runner tag
+    name: 🛫 Start Scaleway VM
     runs-on: ubuntu-22.04
     outputs:
       id: ${{ steps.get_instance_id.outputs.id }}
@@ -129,6 +129,7 @@ jobs:
             APP_VERSION=${{ fromJSON(steps.meta.outputs.json).labels['org.opencontainers.image.version'] }}
 
   stop:
+    name: 🛬 Stop Scaleway VM
     runs-on: ubuntu-22.04
     needs: deploy
     outputs:
