@@ -71,7 +71,7 @@ jobs:
 
   deploy:
     name: 🐋 Save docker image
-    runs-on:  scw-runner
+    runs-on:  [self-hosted, unreal ]
     needs: start # TODO: UNCOMMENT THIS LINE IF YOU WANT TO STOP THE BUILD IF NO CHANGE IN Sources FOLDER
     permissions:
       contents: read
