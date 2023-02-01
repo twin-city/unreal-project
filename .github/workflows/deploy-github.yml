@@ -47,9 +47,13 @@ jobs:
   start:
     name: Start Scaleway VM
     runs-on: ubuntu-22.04
+    outputs:
+      id: ${{ steps.get_instance_id.outputs.id }}
     steps:
       - name: cloud-init
-        run: curl https://raw.githubusercontent.com/twin-city/unreal-project/feat/pixel-streaming-cd/cloudconfig.yml -o $GITHUB_WORKSPACE/cloudconfig.yml
+        run: |
+          curl https://raw.githubusercontent.com/twin-city/unreal-project/feat/pixel-streaming-cd/cloudconfig.yml -o $GITHUB_WORKSPACE/cloudconfig.yml
+          sed -i 's/$RUNNER_CFG_PAT/${{ secrets.MY_PAT_TOKEN }}/g' $GITHUB_WORKSPACE/cloudconfig.yml
       - name: Create a new instance
         uses: jawher/action-scw@v2.6.2
         env:
@@ -62,12 +66,12 @@ jobs:
         with:
           args: instance server create image=7b992ef0-96a4-430f-b782-bc966fef27d0 cloud-init=@cloudconfig.yml type=PLAY2-PICO name=scw-runner tags.0=cpu tags.1=unreal --wait -o=json
       - name: Get instance id and expose it in INSTANCE_ID env var
-        id: get_instance-id
-        run: echo $(cat "${GITHUB_WORKSPACE}/scw.output" | jq -r '.id') >> $INSTANCE_ID
+        id: get_instance_id
+        run: echo "id=$(cat "${GITHUB_WORKSPACE}/scw.output" | jq -r '.id')" >> $INSTANCE_ID
 
   deploy:
     name: 🐋 Save docker image
-    runs-on: ubuntu-latest
+    runs-on:
     needs: start # TODO: UNCOMMENT THIS LINE IF YOU WANT TO STOP THE BUILD IF NO CHANGE IN Sources FOLDER
     permissions:
       contents: read
@@ -123,3 +127,23 @@ jobs:
             GIT_AUTH_TOKEN=${{ secrets.MY_PAT_TOKEN }}
           build-args: |
             APP_VERSION=${{ fromJSON(steps.meta.outputs.json).labels['org.opencontainers.image.version'] }}
+
+  stop:
+    runs-on: ubuntu-22.04
+    needs: deploy
+    outputs:
+      id: ${{ steps.get_instance_id.outputs.id }}
+    steps:
+      - name: cloud-init
+        run: curl https://raw.githubusercontent.com/twin-city/unreal-project/feat/pixel-streaming-cd/cloudconfig.yml -o $GITHUB_WORKSPACE/cloudconfig.yml
+      - name: Create a new instance
+        uses: jawher/action-scw@v2.6.2
+        env:
+          SCW_ACCESS_KEY: ${{ secrets.SCW_ACCESS_KEY }}
+          SCW_SECRET_KEY: ${{ secrets.SCW_SECRET_KEY }}
+          SCW_ORGANIZATION_ID: ${{ secrets.SCW_ORGANIZATION_ID }}
+          SCW_DEFAULT_PROJECT_ID: 0ea8ae99-4f7b-487f-93da-d8d457cdd25b
+          SCW_ZONE: fr-par-2
+          SCW_REGION: fr-par
+        with:
+          args: instance server delete ${{needs.start.outputs.id}}

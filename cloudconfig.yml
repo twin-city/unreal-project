@@ -1,8 +1,8 @@
 #cloud-config
 
 # On met à jour le système
-package_update: true
-package_upgrade: true
+package_update: false
+package_upgrade: false
 
 # On créé l'utilisateur avec droits sudo en précisant sa clé SSH publique
 users:
@@ -14,21 +14,30 @@ users:
 #  - blender
 #  - curl
 
+write_files:
+  - path: /etc/profile.d/secret.sh
+    content: |
+         # RUNNER_CFG_PAT (The PAT Token) is replaced by the github action
+         export RUNNER_CFG_PAT=$RUNNER_CFG_PAT
+
 runcmd:
   # On télécharge le package des github runners
   # https://github.com/actions/runner/blob/main/docs/automate.md
   - curl -s https://raw.githubusercontent.com/actions/runner/main/scripts/create-latest-svc.sh | bash -s -- -s twin-city/unreal-project -n scw-runner -u ue5
   - 'mkdir -p /home/ue5/.ssh'
   - 'cp /root/.ssh/authorized_keys /home/ue5/.ssh/authorized_keys'
-  - 'chown ${user}:root /home/ue5/.ssh/authorized_keys'
+  - 'chown ue5 /home/ue5/.ssh/authorized_keys'
   # On se place dans le dossier de l'utilisateur
   - cd /home/ue5
-
-  # On ajoute un alias pour mettre à jour facilement le système
-  - echo "alias fup='sudo apt update && sudo apt full-upgrade -y && sudo apt autoremove -y'" >> .bashrc
 
   #- git clone https://github.com/twin-city/unreal-project
   # On télécharge les fichiers de travail
   #- wget https://download.blender.org/demo/test/benchmark.zip
 
 final_message: "Le système est configuré. Délai nécessaire : $UPTIME secondes"
+
+power_state:
+  timeout: 120
+  delay: "+5"
+  message: Shutdown in five minutes. Please save your work.
+  mode: shutdown
