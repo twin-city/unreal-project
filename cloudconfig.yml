@@ -23,12 +23,12 @@ write_files:
 runcmd:
   # On télécharge le package des github runners
   # https://github.com/actions/runner/blob/main/docs/automate.md
-  - curl -s https://raw.githubusercontent.com/actions/runner/main/scripts/create-latest-svc.sh | bash -s -- -s twin-city/unreal-project -n scw-runner -u ue5
   - 'mkdir -p /home/ue5/.ssh'
   - 'cp /root/.ssh/authorized_keys /home/ue5/.ssh/authorized_keys'
   - 'chown ue5 /home/ue5/.ssh/authorized_keys'
   # On se place dans le dossier de l'utilisateur
   - cd /home/ue5
+  - curl -s https://raw.githubusercontent.com/actions/runner/main/scripts/create-latest-svc.sh | bash -s -- -s twin-city/unreal-project -n scw-runner -u ue5
 
   #- git clone https://github.com/twin-city/unreal-project
   # On télécharge les fichiers de travail
