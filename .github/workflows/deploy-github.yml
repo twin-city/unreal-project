@@ -67,7 +67,7 @@ jobs:
           args: instance server create image=7b992ef0-96a4-430f-b782-bc966fef27d0 cloud-init=@cloudconfig.yml type=PLAY2-PICO name=scw-runner tags.0=cpu tags.1=unreal --wait -o=json
       - name: Get instance id and expose it in INSTANCE_ID env var
         id: get_instance_id
-        run: echo "id=$(cat "${GITHUB_WORKSPACE}/scw.output" | jq -r '.id')" >> $INSTANCE_ID
+        run: echo "id=$(cat "${GITHUB_WORKSPACE}/scw.output" | jq -r '.id')" >> $GITHUB_ENV
 
   deploy:
     name: 🐋 Save docker image
