@@ -2,12 +2,12 @@
 # Perform the build in an Unreal Engine container image that includes the Engine Tools and Pixel Streaming for Linux
 FROM --platform=${BUILDPLATFORM:-linux/amd64} ghcr.io/epicgames/unreal-engine:dev-5.0.3 AS builder
 
-# Copy UE4 project (assumes `.uproject` in this directory)
-COPY --chown=ue5:ue5 . /tmp/project
+# Copy UE5 project (assumes `.uproject` in this directory)
+COPY  . /tmp/project
 WORKDIR /tmp/project
 
 # Package the example Unreal project
-RUN /home/ue4/UnrealEngine/Engine/Build/BatchFiles/RunUAT.sh BuildCookRun \
+RUN /home/ue5/UnrealEngine/Engine/Build/BatchFiles/RunUAT.sh BuildCookRun \
 	-clientconfig=Development -serverconfig=Development \
 	-project=/tmp/project/TwinCity.uproject \
 	-utf8output -nodebuginfo -allmaps -noP4 -cook -build -stage -prereqs -pak -archive \

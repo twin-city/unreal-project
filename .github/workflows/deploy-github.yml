@@ -133,7 +133,18 @@ jobs:
     runs-on: ubuntu-22.04
     needs: deploy
     steps:
-      - name: Create a new instance
+      - name: Remove runner
+        uses: jawher/action-scw@v2.6.2
+        env:
+          SCW_ACCESS_KEY: ${{ secrets.SCW_ACCESS_KEY }}
+          SCW_SECRET_KEY: ${{ secrets.SCW_SECRET_KEY }}
+          SCW_ORGANIZATION_ID: ${{ secrets.SCW_ORGANIZATION_ID }}
+          SCW_DEFAULT_PROJECT_ID: 0ea8ae99-4f7b-487f-93da-d8d457cdd25b
+          SCW_ZONE: fr-par-2
+          SCW_REGION: fr-par
+        with:
+          args: instance server ssh server-id=${{needs.start.outputs.id}} username=ue5 command="curl -s https://raw.githubusercontent.com/actions/runner/main/scripts/remove-svc.sh | bash -s twin-city/unreal-project"
+      - name: Stop the instance
         uses: jawher/action-scw@v2.6.2
         env:
           SCW_ACCESS_KEY: ${{ secrets.SCW_ACCESS_KEY }}
