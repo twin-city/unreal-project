@@ -15,15 +15,14 @@
 void FSegmantizerModule::StartupModule()
 {
 	ClassManager = NewObject<UClassManager>();
+
+
+
+
 	
-	const FString Prefix = FPaths::ProjectPluginsDir();
-	const FString Directory = Prefix / "Segmantizer" / "Content";
+	const FString Directory = TEXT("/Segmantizer");
 
 	const FString FileName = "SemanticClassMap";
-	
-	// Register the plugin directory with the editor
-	FAssetRegistryModule& AssetRegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
-	AssetRegistryModule.Get().AddPath(*Directory);
 
 	const FString Filepath = Directory / FileName;
 	
@@ -31,6 +30,10 @@ void FSegmantizerModule::StartupModule()
 
 	if (!ClassDataAsset)
 	{
+		// Register the plugin directory with the editor
+		FAssetRegistryModule& AssetRegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
+		AssetRegistryModule.Get().AddPath(*Directory);
+		
 		// Create and populate the asset
 		UPackage *ClassMappingPackage = CreatePackage(*Filepath);
 		
@@ -45,6 +48,8 @@ void FSegmantizerModule::StartupModule()
 
 void FSegmantizerModule::Save()
 {
+	UEditorAssetLibrary::SaveLoadedAsset(ClassDataAsset, false);
+
 }
 
 void FSegmantizerModule::SetViewToSemantic()
@@ -66,7 +71,7 @@ void FSegmantizerModule::SetViewToSemantic()
 		if (ClassNamePtr)
 		{
 			FSemanticClass& SemanticClass = ClassDataAsset->SemanticClasses[*ClassNamePtr];
-			GEngine->AddOnScreenDebugMessage(-1,200,SemanticClass.Color,FString::Printf(TEXT("Hello %s"), *SemanticClass.Name));
+			GEngine->AddOnScreenDebugMessage(-1,200,SemanticClass.Color,FString::Printf(TEXT("Hello %s"), *Actor->GetName()));
 		}
 	}
 }

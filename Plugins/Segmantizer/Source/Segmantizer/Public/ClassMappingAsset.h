@@ -18,7 +18,7 @@ struct FSemanticClass
 	FColor Color;
 };
 
-UCLASS()
+UCLASS(BlueprintType)
 class SEGMANTIZER_API UClassMappingAsset : public UDataAsset
 {
 	GENERATED_BODY()
