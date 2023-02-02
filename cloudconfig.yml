@@ -10,6 +10,11 @@ users:
    - name: ue5
      shell: /bin/bash
      sudo: ['ALL=(ALL) NOPASSWD:ALL']
+
+# On créé le docker group
+groups:
+  - docker: [ue5, sudo]
+
 #packages:
 #  - blender
 #  - curl
@@ -23,6 +28,7 @@ write_files:
 runcmd:
   # On télécharge le package des github runners
   # https://github.com/actions/runner/blob/main/docs/automate.md
+  - sudo chmod 666 /var/run/docker.sock
   - 'mkdir -p /home/ue5/.ssh'
   - 'cp /root/.ssh/authorized_keys /home/ue5/.ssh/authorized_keys'
   - 'chown ue5 /home/ue5/.ssh/authorized_keys'
@@ -31,15 +37,11 @@ runcmd:
   - export RUNNER_CFG_PAT=$RUNNER_CFG_PAT
   - curl -s https://raw.githubusercontent.com/actions/runner/main/scripts/create-latest-svc.sh | bash -s -- -s twin-city/unreal-project -n scw-runner -u ue5 -l unreal
 
-  #- git clone https://github.com/twin-city/unreal-project
-  # On télécharge les fichiers de travail
-  #- wget https://download.blender.org/demo/test/benchmark.zip
-
 final_message: "Le système est configuré. Délai nécessaire : $UPTIME secondes"
 
 power_state:
   timeout: 120
-  delay: "+5"
+  delay: "+57"
   message: Shutdown in one hour. Please save your work.
   mode: poweroff
   condition: true
