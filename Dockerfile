@@ -1,23 +1,22 @@
-
 # Perform the build in an Unreal Engine container image that includes the Engine Tools and Pixel Streaming for Linux
 FROM --platform=${BUILDPLATFORM:-linux/amd64} ghcr.io/epicgames/unreal-engine:dev-5.0.3 AS builder
 
 # Copy UE5 project (assumes `.uproject` in this directory)
-COPY  . /tmp/project
-WORKDIR /tmp/project
+COPY  --chown=ue4:ue4 . /tmp/project
+WORKDIR  /tmp/project
 
 # Package the example Unreal project
-RUN /home/ue5/UnrealEngine/Engine/Build/BatchFiles/RunUAT.sh BuildCookRun \
-	-clientconfig=Development -serverconfig=Development \
-	-project=/tmp/project/TwinCity.uproject \
-	-utf8output -nodebuginfo -allmaps -noP4 -cook -build -stage -prereqs -pak -archive \
-	-archivedirectory=/tmp/project/dist \
-	-platform=Linux
+RUN /home/ue4/UnrealEngine/Engine/Build/BatchFiles/RunUAT.sh BuildCookRun \
+        -clientconfig=Development -serverconfig=Development \
+        -project=/tmp/project/TwinCity.uproject \
+        -utf8output -nodebuginfo -allmaps -noP4 -cook -build -stage -prereqs -pak -archive \
+        -archivedirectory=/tmp/project/dist \
+        -platform=Linux
 
 # Copy the packaged files into a container image that includes CUDA but doesn't include any Unreal Engine components
 FROM --platform=${BUILDPLATFORM:-linux/amd64} ghcr.io/epicgames/unreal-engine:runtime-pixel-streaming
-WORKDIR /home/ue5/project
-COPY --from=builder --chown=ue5:ue5 /tmp/project/dist/LinuxNoEditor ./
+WORKDIR /home/ue4/project
+COPY --from=builder --chown=ue4:ue4 /tmp/project/dist/LinuxNoEditor ./
 
 # Establish ENV
 ENV RES_X=1920 \
