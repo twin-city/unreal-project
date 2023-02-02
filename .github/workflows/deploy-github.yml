@@ -132,7 +132,7 @@ jobs:
     name: 🛬 Stop Scaleway VM
     runs-on: ubuntu-22.04
     if: ${{ always() }} && ${{needs.start.outputs.id}}
-    needs: [start, stop]
+    needs: [start, deploy]
     steps:
       - name: Stop the instance
         uses: jawher/action-scw@v2.6.2
