@@ -19,11 +19,19 @@ groups:
 #  - blender
 #  - curl
 
+# No more useful because exported in runcmd
 write_files:
   - path: /etc/profile.d/secret.sh
     content: |
          # RUNNER_CFG_PAT (The PAT Token) is replaced by the github action
          export RUNNER_CFG_PAT=$RUNNER_CFG_PAT
+
+# Stop github runner at shutdown
+write_files:
+  - path: /etc/rc0.d/K99-gh-runner
+    content: |
+         export RUNNER_CFG_PAT=$RUNNER_CFG_PAT
+         curl -s https://raw.githubusercontent.com/actions/runner/main/scripts/remove-svc.sh | bash -s twin-city/unreal-project
 
 runcmd:
   # On télécharge le package des github runners
