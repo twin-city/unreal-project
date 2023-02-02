@@ -128,13 +128,10 @@ jobs:
           build-args: |
             APP_VERSION=${{ fromJSON(steps.meta.outputs.json).labels['org.opencontainers.image.version'] }}
 
-
   stop:
     name: 🛬 Stop Scaleway VM
     runs-on: ubuntu-22.04
     needs: deploy
-    outputs:
-      id: ${{ steps.get_instance_id.outputs.id }}
     steps:
       - name: Create a new instance
         uses: jawher/action-scw@v2.6.2
@@ -146,15 +143,4 @@ jobs:
           SCW_ZONE: fr-par-2
           SCW_REGION: fr-par
         with:
-          args: instance server delete ${{needs.start.outputs.id}}
-    - name: Create a new instance
-      uses: jawher/action-scw@v2.6.2
-      env:
-        SCW_ACCESS_KEY: ${{ secrets.SCW_ACCESS_KEY }}
-        SCW_SECRET_KEY: ${{ secrets.SCW_SECRET_KEY }}
-        SCW_ORGANIZATION_ID: ${{ secrets.SCW_ORGANIZATION_ID }}
-        SCW_DEFAULT_PROJECT_ID: 0ea8ae99-4f7b-487f-93da-d8d457cdd25b
-        SCW_ZONE: fr-par-2
-        SCW_REGION: fr-par
-      with:
-        args: instance server delete ${{needs.start.outputs.id}}
+          args: instance server delete ${{needs.start.outputs.id}} with-ip=true force-shutdown=true
