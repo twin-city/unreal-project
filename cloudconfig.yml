@@ -40,5 +40,6 @@ final_message: "Le système est configuré. Délai nécessaire : $UPTIME seconde
 power_state:
   timeout: 120
   delay: "+5"
-  message: Shutdown in five minutes. Please save your work.
-  mode: shutdown
+  message: Shutdown in one hour. Please save your work.
+  mode: poweroff
+  condition: true
