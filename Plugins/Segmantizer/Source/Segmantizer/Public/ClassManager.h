@@ -31,11 +31,18 @@ class SEGMANTIZER_API UClassManager : public UObject
 
 private:
 	UPROPERTY()
+	UMaterial* SemanticMaterial = nullptr;
+
+	UPROPERTY()
 	TMap<AActor*, FActorDescriptor> ActorInstanceDescriptors;
 
 public:
+	UClassManager();
+	
 	void AddActorInstance(AActor* ActorInstance);
 	void RemoveActorInstance(const AActor* ActorInstance);
 	void PaintActor(const AActor* ToPaint, class UMaterialInstanceConstant* Material);
 	void RestoreAll();
+	
+	UMaterialInstanceConstant* GetSemanticClassMaterial(struct FSemanticClass& SemanticClass);
 };

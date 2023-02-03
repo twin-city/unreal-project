@@ -9,6 +9,7 @@
 #include "EditorAssetLibrary.h"
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "Interfaces/IPluginManager.h"
+#include "Materials/MaterialInstance.h"
 
 #define LOCTEXT_NAMESPACE "FSegmantizerModule"
 
@@ -63,15 +64,19 @@ void FSegmantizerModule::SetViewToSemantic()
 
 	for (AActor* Actor : LevelActors)
 	{
-		FString* ClassNamePtr = ClassDataAsset->ActorInstanceToClassName.Find(Actor->GetActorGuid());
+		const FString* ClassNamePtr = ClassDataAsset->ActorInstanceToClassName.Find(Actor->GetActorGuid());
 		
 		if (!ClassNamePtr)
 			ClassNamePtr = ClassDataAsset->ActorClassToClassName.Find(Actor->GetClass());
 
 		if (ClassNamePtr)
 		{
+			//ClassManager->AddActorInstance(Actor);
+			
 			FSemanticClass& SemanticClass = ClassDataAsset->SemanticClasses[*ClassNamePtr];
-			GEngine->AddOnScreenDebugMessage(-1,200,SemanticClass.Color,FString::Printf(TEXT("Hello %s"), *Actor->GetName()));
+
+			UMaterialInstanceConstant* Material = ClassManager->GetSemanticClassMaterial(SemanticClass);
+			ClassManager->PaintActor(Actor, Material);
 		}
 	}
 }

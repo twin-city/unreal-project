@@ -3,12 +3,19 @@
 
 #include "ClassManager.h"
 #include "Materials/MaterialInstanceConstant.h"
+#include "Factories/MaterialInstanceConstantFactoryNew.h"
+#include "ClassMappingAsset.h"
+
+UClassManager::UClassManager()
+{
+	UMaterial* AssetMaterial = LoadObject<UMaterial>(nullptr, *FString("/Segmantizer/SemanticMaterial"));
+	SemanticMaterial = DuplicateObject<UMaterial>(AssetMaterial, nullptr);
+}
 
 void UClassManager::AddActorInstance(AActor* ActorInstance)
 {
 	TArray<UActorComponent*> ActorComponents;
-	constexpr bool bIncludeFromChildActors = true;
-	ActorInstance->GetComponents(UPrimitiveComponent::StaticClass(), ActorComponents, bIncludeFromChildActors);
+	ActorInstance->GetComponents(UPrimitiveComponent::StaticClass(), ActorComponents, true);
 
 	FActorDescriptor& ActorDescriptor = ActorInstanceDescriptors.Emplace(ActorInstance);
 	
@@ -59,4 +66,36 @@ void UClassManager::RestoreAll()
 				Component->SetMaterial(mi, ComponentDescriptor.MaterialInterfaces[mi]);
 		}
 	}
+}
+
+UMaterialInstanceConstant* UClassManager::GetSemanticClassMaterial(FSemanticClass& SemanticClass)
+{
+	if (SemanticClass.PlainColorMaterialInstance)
+		return SemanticClass.PlainColorMaterialInstance;
+		
+	UMaterialInstanceConstantFactoryNew* Factory = NewObject<UMaterialInstanceConstantFactoryNew>();
+	Factory->InitialParent = SemanticMaterial;
+
+	const FString PackageFileName = FString::Printf(TEXT("MI_%s"), *(SemanticClass.Name));
+	const FString PackagePath = TEXT("/Segmantizer/ConstMaterials") / PackageFileName;
+	
+	UPackage* Package = CreatePackage(*PackagePath);
+	
+	SemanticClass.PlainColorMaterialInstance = Cast<UMaterialInstanceConstant>(Factory->FactoryCreateNew(
+		UMaterialInstanceConstant::StaticClass(),
+		Package,
+		*PackageFileName,
+		RF_Public | RF_Transient,
+		nullptr,
+		GWarn));
+
+	if (!SemanticClass.PlainColorMaterialInstance)
+	{
+		UE_LOG(LogTemp, Error, TEXT("%s: Could not create the plain color material instance"), *FString(__FUNCTION__))
+		check(SemanticClass.PlainColorMaterialInstance)
+	}
+	
+	SemanticClass.PlainColorMaterialInstance->SetVectorParameterValueEditorOnly(TEXT("SemanticColor"), SemanticClass.Color);
+
+	return SemanticClass.PlainColorMaterialInstance;
 }

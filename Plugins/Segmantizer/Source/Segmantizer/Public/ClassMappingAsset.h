@@ -16,6 +16,9 @@ struct FSemanticClass
 
 	UPROPERTY(EditAnywhere)
 	FColor Color;
+
+	UPROPERTY()
+	class UMaterialInstanceConstant* PlainColorMaterialInstance = nullptr;
 };
 
 UCLASS(BlueprintType)
