@@ -1,3 +1,4 @@
+# From https://github.com/krishnaji/az-aks-unreal-pixel-streaming/blob/UE4.27/Game/Dockerfile
 # Perform the build in an Unreal Engine container image that includes the Engine Tools and Pixel Streaming for Linux
 FROM --platform=${BUILDPLATFORM:-linux/amd64} ghcr.io/epicgames/unreal-engine:dev-5.0.3 AS builder
 
@@ -16,7 +17,7 @@ RUN /home/ue4/UnrealEngine/Engine/Build/BatchFiles/RunUAT.sh BuildCookRun \
 # Copy the packaged files into a container image that includes CUDA but doesn't include any Unreal Engine components
 FROM --platform=${BUILDPLATFORM:-linux/amd64} ghcr.io/epicgames/unreal-engine:runtime-pixel-streaming
 WORKDIR /home/ue4/project
-COPY --from=builder --chown=ue4:ue4 /tmp/project/dist/LinuxNoEditor ./
+COPY --from=builder --chown=ue4:ue4 /tmp/project/dist/Linux ./
 
 # Establish ENV
 ENV RES_X=1920 \
