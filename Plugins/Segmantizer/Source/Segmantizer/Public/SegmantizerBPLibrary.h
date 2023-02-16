@@ -35,5 +35,8 @@ public:
 	static void SetViewToSemantic();
 
 	UFUNCTION(BlueprintCallable)
+	static void SetViewToLit();
+
+	UFUNCTION(BlueprintCallable)
 	static void Save();
 };

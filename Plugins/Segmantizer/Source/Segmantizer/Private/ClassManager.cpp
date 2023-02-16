@@ -6,19 +6,19 @@
 #include "Factories/MaterialInstanceConstantFactoryNew.h"
 #include "ClassMappingAsset.h"
 
-UClassManager::UClassManager()
+FClassManager::FClassManager()
 {
 	UMaterial* AssetMaterial = LoadObject<UMaterial>(nullptr, *FString("/Segmantizer/SemanticMaterial"));
 	SemanticMaterial = DuplicateObject<UMaterial>(AssetMaterial, nullptr);
 }
 
-void UClassManager::AddActorInstance(AActor* ActorInstance)
+void FClassManager::AddActorInstance(AActor* ActorInstance)
 {
+	FActorDescriptor& ActorDescriptor = ActorInstanceDescriptors.Emplace(ActorInstance);
+	
 	TArray<UActorComponent*> ActorComponents;
 	ActorInstance->GetComponents(UPrimitiveComponent::StaticClass(), ActorComponents, true);
 
-	FActorDescriptor& ActorDescriptor = ActorInstanceDescriptors.Emplace(ActorInstance);
-	
 	for (UActorComponent* ActorComponent : ActorComponents)
 	{
 		UPrimitiveComponent* PrimitiveComponent = Cast<UPrimitiveComponent>(ActorComponent);
@@ -30,12 +30,12 @@ void UClassManager::AddActorInstance(AActor* ActorInstance)
 	}
 }
 
-void UClassManager::RemoveActorInstance(const AActor* ActorInstance)
+void FClassManager::RemoveActorInstance(const AActor* ActorInstance)
 {
 	ActorInstanceDescriptors.Remove(ActorInstance);
 }
 
-void UClassManager::PaintActor(const AActor* ToPaint, UMaterialInstanceConstant* Material)
+void FClassManager::PaintActor(const AActor* ToPaint, UMaterialInstanceConstant* Material)
 {
 	UMaterialInterface* MaterialInterface = Cast<UMaterialInterface>(Material);
 	
@@ -51,7 +51,7 @@ void UClassManager::PaintActor(const AActor* ToPaint, UMaterialInstanceConstant*
 	}
 }
 
-void UClassManager::RestoreAll()
+void FClassManager::RestoreAll()
 {
 	for (TTuple<AActor*, FActorDescriptor>& ActorTuple : ActorInstanceDescriptors)
 	{
@@ -68,7 +68,7 @@ void UClassManager::RestoreAll()
 	}
 }
 
-UMaterialInstanceConstant* UClassManager::GetSemanticClassMaterial(FSemanticClass& SemanticClass)
+UMaterialInstanceConstant* FClassManager::GetSemanticClassMaterial(FSemanticClass& SemanticClass)
 {
 	if (SemanticClass.PlainColorMaterialInstance)
 		return SemanticClass.PlainColorMaterialInstance;

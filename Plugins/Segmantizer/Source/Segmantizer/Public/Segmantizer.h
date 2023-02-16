@@ -3,15 +3,14 @@
 #pragma once
 
 #include "Modules/ModuleManager.h"
+#include "ClassManager.h"
 
-class UClassManager;
 class UClassMappingAsset;
 
 class FSegmantizerModule : public IModuleInterface
 {
 public:
-	UPROPERTY()
-	UClassManager* ClassManager = nullptr;
+	FClassManager ClassManager;
 	
 	UPROPERTY()
 	UClassMappingAsset* ClassDataAsset = nullptr;
@@ -21,6 +20,7 @@ public:
 	virtual void ShutdownModule() override;
 
 	void SetViewToSemantic();
+	void SetViewToLit();
 
 	void Save();
 };

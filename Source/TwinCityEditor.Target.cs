@@ -10,5 +10,6 @@ public class TwinCityEditorTarget : TargetRules
 		Type = TargetType.Editor;
 		DefaultBuildSettings = BuildSettingsVersion.V2;
 		ExtraModuleNames.Add("TwinCity");
+		IncludeOrderVersion = EngineIncludeOrderVersion.Unreal5_1;
 	}
 }

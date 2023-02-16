@@ -24,8 +24,8 @@ struct FActorDescriptor
 	TMap<UPrimitiveComponent*, FComponentDescriptor> CompDescriptors;
 };
 
-UCLASS()
-class SEGMANTIZER_API UClassManager : public UObject
+USTRUCT()
+struct SEGMANTIZER_API FClassManager
 {
 	GENERATED_BODY()
 
@@ -37,8 +37,8 @@ private:
 	TMap<AActor*, FActorDescriptor> ActorInstanceDescriptors;
 
 public:
-	UClassManager();
-	
+	FClassManager();
+
 	void AddActorInstance(AActor* ActorInstance);
 	void RemoveActorInstance(const AActor* ActorInstance);
 	void PaintActor(const AActor* ToPaint, class UMaterialInstanceConstant* Material);

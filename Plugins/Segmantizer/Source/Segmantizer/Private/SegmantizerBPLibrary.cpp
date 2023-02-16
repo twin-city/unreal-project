@@ -14,6 +14,11 @@ void USegmantizerBPLibrary::SetViewToSemantic()
 	FModuleManager::Get().GetModuleChecked<FSegmantizerModule>("Segmantizer").SetViewToSemantic();
 }
 
+void USegmantizerBPLibrary::SetViewToLit()
+{
+	FModuleManager::Get().GetModuleChecked<FSegmantizerModule>("Segmantizer").SetViewToLit();
+}
+
 void USegmantizerBPLibrary::Save()
 {
 	FModuleManager::Get().GetModuleChecked<FSegmantizerModule>("Segmantizer").Save();
