@@ -30,6 +30,12 @@ void FClassManager::AddActorInstance(AActor* ActorInstance)
 	}
 }
 
+void FClassManager::AddUniqueActorInstance(AActor* ActorInstance)
+{
+	if (!ActorInstanceDescriptors.Contains(ActorInstance))
+		AddActorInstance(ActorInstance);
+}
+
 void FClassManager::RemoveActorInstance(const AActor* ActorInstance)
 {
 	ActorInstanceDescriptors.Remove(ActorInstance);

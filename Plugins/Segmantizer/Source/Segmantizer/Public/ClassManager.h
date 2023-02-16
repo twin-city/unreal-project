@@ -40,6 +40,7 @@ public:
 	FClassManager();
 
 	void AddActorInstance(AActor* ActorInstance);
+	void AddUniqueActorInstance(AActor* ActorInstance);
 	void RemoveActorInstance(const AActor* ActorInstance);
 	void PaintActor(const AActor* ToPaint, class UMaterialInstanceConstant* Material);
 	void RestoreAll();

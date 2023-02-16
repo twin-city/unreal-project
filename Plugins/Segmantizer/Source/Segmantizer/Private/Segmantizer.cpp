@@ -64,7 +64,7 @@ void FSegmantizerModule::SetViewToSemantic()
 
 		if (ClassNamePtr)
 		{
-			ClassManager.AddActorInstance(Actor);
+			ClassManager.AddUniqueActorInstance(Actor);
 			
 			FSemanticClass& SemanticClass = ClassDataAsset->SemanticClasses[*ClassNamePtr];
 
