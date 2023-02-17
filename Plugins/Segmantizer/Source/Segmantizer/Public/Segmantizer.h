@@ -44,7 +44,7 @@ public:
 
 	void Save();
 
-	void CaptureStart();
+	void CaptureStart(float CaptureDelay = 0.f);
 	
 	bool CaptureLoop(float DeltaTime);
 	void CaptureEnd();

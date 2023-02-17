@@ -52,7 +52,7 @@ void FSegmantizerModule::Save()
 	UEditorAssetLibrary::SaveLoadedAsset(ClassDataAsset, false);
 }
 
-void FSegmantizerModule::CaptureStart()
+void FSegmantizerModule::CaptureStart(float CaptureDelay)
 {
 	const FCaptureRequest SemanticRequest{ "Semantic", FRequestDelegate::CreateRaw(this, &FSegmantizerModule::SetViewToSemantic) };
 	CaptureQueue.Enqueue(SemanticRequest);
@@ -60,7 +60,7 @@ void FSegmantizerModule::CaptureStart()
 	const FCaptureRequest LitRequest{ "Lit", FRequestDelegate::CreateRaw(this, &FSegmantizerModule::SetViewToLit) };
 	CaptureQueue.Enqueue(LitRequest);
 
-	TickDelegateHandle = FTSTicker::GetCoreTicker().AddTicker(TickDelegate);
+	TickDelegateHandle = FTSTicker::GetCoreTicker().AddTicker(TickDelegate, CaptureDelay);
 }
 
 void FSegmantizerModule::ShotCapture(const FString& Filename)
