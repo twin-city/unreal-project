@@ -5,15 +5,35 @@
 #include "Modules/ModuleManager.h"
 #include "ClassManager.h"
 
-class UClassMappingAsset;
+UENUM()
+enum EViewType
+{
+	LIT,
+	SEMANTIC,
+	NONE
+};
+
 
 class FSegmantizerModule : public IModuleInterface
 {
+	DECLARE_DELEGATE(FRequestDelegate);
+	
+	struct FCaptureRequest
+	{
+		FString				Filename;
+		FRequestDelegate	CaptureDelegate;
+	};
+	
+	TQueue<FCaptureRequest> CaptureQueue;
+	FTickerDelegate TickDelegate;
+	FTSTicker::FDelegateHandle TickDelegateHandle;
+
+	void ShotCapture(const FString& Filename);
+	
 public:
 	FClassManager ClassManager;
 	
-	UPROPERTY()
-	UClassMappingAsset* ClassDataAsset = nullptr;
+	class UClassMappingAsset* ClassDataAsset = nullptr;
 	
 	/** IModuleInterface implementation */
 	virtual void StartupModule() override;
@@ -23,4 +43,9 @@ public:
 	void SetViewToLit();
 
 	void Save();
+
+	void CaptureStart();
+	
+	bool CaptureLoop(float DeltaTime);
+	void CaptureEnd();
 };

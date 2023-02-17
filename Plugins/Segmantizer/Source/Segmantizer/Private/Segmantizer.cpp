@@ -14,6 +14,8 @@
 
 void FSegmantizerModule::StartupModule()
 {
+	TickDelegate = FTickerDelegate::CreateRaw(this, &FSegmantizerModule::CaptureLoop);
+	
 	const FString Directory = TEXT("/Segmantizer");
 
 	const FString FileName = "SemanticClassMap";
@@ -25,7 +27,7 @@ void FSegmantizerModule::StartupModule()
 	if (!ClassDataAsset)
 	{
 		// Register the plugin directory with the editor
-		FAssetRegistryModule& AssetRegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
+		const FAssetRegistryModule& AssetRegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
 		AssetRegistryModule.Get().AddPath(*Directory);
 		
 		// Create and populate the asset
@@ -36,14 +38,59 @@ void FSegmantizerModule::StartupModule()
 			UClassMappingAsset::StaticClass(),
 			*FileName,
 			EObjectFlags::RF_Public | EObjectFlags::RF_Standalone);
-
 	}
+}
+
+void FSegmantizerModule::ShutdownModule()
+{
+	if (TickDelegateHandle.IsValid())
+		FTSTicker::GetCoreTicker().RemoveTicker(TickDelegateHandle);
 }
 
 void FSegmantizerModule::Save()
 {
 	UEditorAssetLibrary::SaveLoadedAsset(ClassDataAsset, false);
+}
 
+void FSegmantizerModule::CaptureStart()
+{
+	const FCaptureRequest SemanticRequest{ "Semantic", FRequestDelegate::CreateRaw(this, &FSegmantizerModule::SetViewToSemantic) };
+	CaptureQueue.Enqueue(SemanticRequest);
+	
+	const FCaptureRequest LitRequest{ "Lit", FRequestDelegate::CreateRaw(this, &FSegmantizerModule::SetViewToLit) };
+	CaptureQueue.Enqueue(LitRequest);
+
+	TickDelegateHandle = FTSTicker::GetCoreTicker().AddTicker(TickDelegate);
+}
+
+void FSegmantizerModule::ShotCapture(const FString& Filename)
+{
+	const FDateTime Now = FDateTime::Now();
+	const FString NowStr = FString::Printf(TEXT("%d.%02d.%02d-%02d.%02d.%02d.%03d"), Now.GetYear(), Now.GetMonth(), Now.GetDay(), Now.GetHour(), Now.GetMinute(), Now.GetSecond(), Now.GetMillisecond());
+
+	FScreenshotRequest::RequestScreenshot(Filename + NowStr, false, false);
+}
+
+bool FSegmantizerModule::CaptureLoop(float DeltaTime)
+{
+	FCaptureRequest CaptureRequest;
+	if (!CaptureQueue.Dequeue(CaptureRequest))
+	{
+		CaptureEnd();
+		return false;
+	}
+
+	if (CaptureRequest.CaptureDelegate.IsBound())
+		CaptureRequest.CaptureDelegate.Execute();
+
+	ShotCapture(CaptureRequest.Filename);
+
+	return true;
+}
+
+void FSegmantizerModule::CaptureEnd()
+{
+	
 }
 
 void FSegmantizerModule::SetViewToSemantic()
@@ -77,14 +124,6 @@ void FSegmantizerModule::SetViewToSemantic()
 void FSegmantizerModule::SetViewToLit()
 {
 	ClassManager.RestoreAll();
-}
-
-
-void FSegmantizerModule::ShutdownModule()
-{
-	// This function may be called during shutdown to clean up your module.  For modules that support dynamic reloading,
-	// we call this function before unloading the module.
-	
 }
 
 #undef LOCTEXT_NAMESPACE
