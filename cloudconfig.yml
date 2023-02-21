@@ -29,6 +29,8 @@ write_files:
 # Stop github runner at shutdown
 write_files:
   - path: /etc/rc0.d/K99-gh-runner
+    owner: root:root
+    permissions: '0777'
     content: |
          export RUNNER_CFG_PAT=$RUNNER_CFG_PAT
          curl -s https://raw.githubusercontent.com/actions/runner/main/scripts/remove-svc.sh | bash -s twin-city/unreal-project
@@ -49,7 +51,7 @@ final_message: "Le système est configuré. Délai nécessaire : $UPTIME seconde
 
 power_state:
   timeout: 120
-  delay: "+57"
+  delay: "+150"
   message: Shutdown in one hour. Please save your work.
   mode: poweroff
   condition: true
