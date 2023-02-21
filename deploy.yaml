@@ -1,0 +1,225 @@
+# From https://github.com/krishnaji/az-aks-unreal-pixel-streaming/blob/UE4.27/aks-deploy.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: kubectl-client
+  namespace: twincity
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: kubectl-client
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  verbs:
+  - '*'
+- apiGroups:
+  - ""
+  resources:
+  - services
+  verbs:
+  - '*'
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: kubectl-client
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: kubectl-client
+subjects:
+- kind: ServiceAccount
+  name: kubectl-client
+  namespace: twincity
+---
+# PixelStreaming Config
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: pixel-streaming-config
+  namespace: twincity
+data:
+  signallingserver.json:  |
+    {
+      "UseFrontend": false,
+      "UseMatchmaker": false,
+      "UseHTTPS": false,
+      "UseAuthentication": false,
+      "LogToFile": true,
+      "LogVerbose": true,
+      "HomepageFile": "/Public/player.html",
+      "AdditionalRoutes": {},
+      "EnableWebserver": true,
+      "PublicIp": "",
+      "HttpPort": 80,
+      "HttpsPort": 443,
+      "StreamerPort": 8888,
+      "SFUPort": 8889,
+      "MaxPlayerCount": -1
+    }
+
+---
+
+# SignallingServer Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: signallingserver
+  namespace: twincity
+  labels:
+    app: signallingserver
+spec:
+  ports:
+  - port: 80
+    targetPort: 80
+    name: port80
+  - port: 8888
+    targetPort: 8888
+    name: port8888
+  selector:
+    app: signallingserver
+  type: LoadBalancer
+---
+# TURN Server Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: turnserver
+  namespace: twincity
+  labels:
+    app: turnserver
+spec:
+  ports:
+  - port: 3478
+    targetPort: 3478
+    name: porttcp3478
+    protocol: TCP
+  selector:
+    app: turnserver
+  type: LoadBalancer
+---
+
+# Deploy SignallingServer
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: signallingserver
+  namespace: twincity
+  labels:
+    app: signallingserver
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: signallingserver
+  template:
+    metadata:
+      labels:
+        app: signallingserver
+    spec:
+      serviceAccountName: kubectl-client
+      initContainers:
+      - name: init
+        image: "bitnami/kubectl"
+        command: ["sh"]
+        args:
+        - -c
+        - |
+          signallingLoadBalancerIP=""
+          while [ -z "$signallingLoadBalancerIP" ]; do
+              signallingLoadBalancerIP=$(kubectl get service signallingserver -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+              sleep 5
+          done
+          echo "signallingLoadBalancerIP=$signallingLoadBalancerIP" > /tmp/ip.txt
+          turnLoadBalancerIP=""
+          while [ -z "$turnLoadBalancerIP" ]; do
+              turnLoadBalancerIP=$(kubectl get service turnserver -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+              sleep 5
+          done
+          echo "turnLoadBalancerIP=$turnLoadBalancerIP" >> /tmp/ip.txt
+          # Delete the old configmap if it exists
+          kubectl delete configmap signallingserver-config-ips --ignore-not-found
+          kubectl create configmap signallingserver-config-ips --from-env-file=/tmp/ip.txt
+          sleep 10
+      imagePullSecrets:
+        - name: github-reg-cred
+      containers:
+      - name: signallingserver
+        image: ghcr.io/epicgames/pixel-streaming-signalling-server:5.0.3
+        envFrom:
+        - configMapRef:
+            name: signallingserver-config-ips
+        args:
+          - --configFile=/config/signallingserver.json
+          - --peerConnectionOptions={"iceServers":[{"urls":["turn:$(turnLoadBalancerIP):3478"],"username":"usr","credential":"usr123"}]}
+          - --PublicIp=$(signallingLoadBalancerIP)
+        ports:
+        - containerPort: 80
+        - containerPort: 8888
+        volumeMounts:
+        - name: pixel-streaming-config
+          mountPath: /config
+      - name: game
+        image: ghcr.io/twin-city/unreal-project-pixel-stream:feat-pixel-streaming-cd
+        command: ["/bin/bash"]
+        args:
+        - -c
+        - |
+          ./TwinCity.sh -PixelStreamingURL=${SIGNALSERVER_URL} -RenderOffscreen -Unattended -ForceRes -ResX=${RES_X} -ResY=${RES_Y} \
+          -Windowed -ForceRes -StdOut
+        env:
+        -  name: SIGNALSERVER_URL
+           value: ws://signallingserver:8888
+        -  name: RES_X
+           value: "1920"
+        -  name: RES_Y
+           value: "1080"
+      volumes:
+        - name: pixel-streaming-config
+          configMap:
+            name: pixel-streaming-config
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: k8s.scaleway.com/pool-name
+                operator: In
+                values:
+                - pool-gpu-3070-s
+
+---
+# Kubernetes TURN Server DaemonSet
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: turnserver
+  namespace: twincity
+  labels:
+    app: turnserver
+spec:
+  selector:
+    matchLabels:
+      app: turnserver
+  template:
+    metadata:
+      labels:
+        app: turnserver
+    spec:
+      nodeSelector:
+        k8s.scaleway.com/pool-name: pool-dev1-m
+      hostNetwork: true
+      containers:
+      - name: turnserver
+        image: ghcr.io/twin-city/unreal-project-turn:latest
+        ports:
+        - containerPort: 3478
+          protocol: UDP
+          name: udp
+        - containerPort: 3478
+          protocol: TCP
+          name: tcp
