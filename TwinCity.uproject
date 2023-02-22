@@ -41,6 +41,10 @@
 		{
 			"Name": "MassGameplay",
 			"Enabled": true
+		},
+		{
+			"Name": "SunPosition",
+			"Enabled": true
 		}
 	]
 }
