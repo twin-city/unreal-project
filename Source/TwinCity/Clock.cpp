@@ -25,6 +25,9 @@ void AClock::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
+	if (!IsTimePassing)
+		return ;
+
 	CurrentTime = FTimespan(FTimespan::FromHours(FPlatformTime::Seconds() - BeginTime));
 
 	CurrentDays = CurrentTime.GetDays();

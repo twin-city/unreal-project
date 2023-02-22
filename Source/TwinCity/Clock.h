@@ -31,6 +31,10 @@ public:
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
 	double				BeginTime;
+	bool				HasChanged = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Clock")
+	bool				IsTimePassing = false;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Clock")
 	double				CurrentMinutes;
