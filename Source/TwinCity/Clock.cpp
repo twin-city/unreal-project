@@ -25,18 +25,25 @@ void AClock::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
-	if (!IsTimePassing)
+	if (!IsTimePassing && TmpHours == -1.f)
+	{
+		TmpTime = CurrentTime;
+		HasChanged = true;
 		return ;
+	}
+
+	if (HasChanged)
+	{
+		BeginTime = FPlatformTime::Seconds() - CurrentHours;
+		HasChanged = false;
+	}
 
 	CurrentTime = FTimespan(FTimespan::FromHours(FPlatformTime::Seconds() - BeginTime));
-
 	CurrentDays = CurrentTime.GetDays();
 	CurrentMinutes = CurrentTime.GetMinutes();
 	
 	if (TmpHours == -1.f)
-	{
 		CurrentHours = CurrentTime.GetHours();
-	}
 	else
 	{
 		CurrentHours = TmpHours;
@@ -44,7 +51,6 @@ void AClock::Tick(float DeltaTime)
 		BeginTime = FPlatformTime::Seconds() - CurrentHours;
 	}
 	CurrentTime = FTimespan(CurrentDays, CurrentHours, CurrentMinutes, 0);
-
 }
 
 // Called to bind functionality to input

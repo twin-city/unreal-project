@@ -60,4 +60,6 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Sky")
   	float				TurnRate;
 
+	FTimespan TmpTime;
+
 };
