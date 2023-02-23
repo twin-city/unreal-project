@@ -165,12 +165,12 @@ spec:
           mountPath: /config
       - name: game
         image: ghcr.io/twin-city/unreal-project-pixel-stream:feat-pixel-streaming-cd
+        imagePullPolicy: Always
         command: ["/bin/bash"]
         args:
         - -c
         - |
-          ./TwinCity.sh -PixelStreamingURL=${SIGNALSERVER_URL} -RenderOffscreen -Unattended -ForceRes -ResX=${RES_X} -ResY=${RES_Y} \
-          -Windowed -ForceRes -StdOut
+          ./TwinCity.sh -PixelStreamingURL=${SIGNALSERVER_URL} -RenderOffscreen -Unattended -ForceRes -ResX=${RES_X} -ResY=${RES_Y} -Windowed -ForceRes -StdOut
         env:
         -  name: SIGNALSERVER_URL
            value: ws://signallingserver:8888

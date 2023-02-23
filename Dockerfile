@@ -12,8 +12,8 @@ RUN /home/ue4/UnrealEngine/Engine/Build/BatchFiles/RunUAT.sh \
       BuildCookRun \
        -utf8output \
        -platform=Linux \
-       -clientconfig=Shipping \
-       -serverconfig=Shipping \
+       -clientconfig=Development \
+       -serverconfig=Development \
        -project=/tmp/project/TwinCity.uproject \
        -noP4 -nodebuginfo -allmaps \
        -cook -build -stage -prereqs -pak -archive \
