@@ -1,0 +1,64 @@
+// Copyright Epic Games, Inc. All Rights Reserved.
+
+RWBuffer<float4> RWSensorLocations_{ParameterName};
+StructuredBuffer<FSensorInfo> SensorInfo_{ParameterName};
+RWBuffer<float4> RWSensorGridUserChannelData_{ParameterName};
+Buffer<float4> SensorGridPreviousUserChannelData_{ParameterName};
+uint4 SensorGridDimensions_{ParameterName};
+int SensorGridWriteIndex_{ParameterName};
+int SensorGridReadIndex_{ParameterName};
+int SensorGridUserChannelCount_{ParameterName};
+
+void UpdateSensorGpu_{ParameterName}_UEImpureCall(int SensorX, int SensorY, float3 SensorLocation, float SensorRange, bool IsValid)
+{
+	NDICitySampleSensorGrid_UpdateSensorGpu(SensorGridDimensions_{ParameterName}.xyz, int3(SensorX, SensorY, SensorGridWriteIndex_{ParameterName}), SensorLocation, SensorRange, IsValid, RWSensorLocations_{ParameterName});
+}
+
+void FindNearestGpu_{ParameterName}(int SensorX, int SensorY, out float3 Location, out float Distance, out int OutSensorX, out int OutSensorY, out int OutOwnerIndex, out bool IsValid)
+{
+	Location = float3(0.0f, 0.0f, 0.0f);
+	Distance = 0.0f;
+	IsValid = false;
+	OutSensorX = -1;
+	OutSensorY = -1;
+	OutOwnerIndex = -1;
+
+	if (SensorGridReadIndex_{ParameterName} >= 0)
+	{
+		int3 TargetSensorIndex;
+		NDICitySampleSensorGrid_FindNearestGpu(SensorInfo_{ParameterName}, SensorGridDimensions_{ParameterName}.xyz, int3(SensorX, SensorY, SensorGridReadIndex_{ParameterName}), Location, Distance, TargetSensorIndex, IsValid);
+
+		if (IsValid)
+		{
+			OutSensorX = TargetSensorIndex.x;
+			OutSensorY = TargetSensorIndex.y;
+			OutOwnerIndex = TargetSensorIndex.z;
+		}
+	}
+}
+
+void ReadSensorUserChannel_{ParameterName}(int SensorX, int SensorY, int OwnerIndex, int ChannelIndex, out float4 UserData, out bool IsValid)
+{
+	NDICitySampleSensorGrid_ReadUserChannel(
+		SensorGridPreviousUserChannelData_{ParameterName},
+		SensorGridDimensions_{ParameterName}.xyz,
+		int3(SensorX, SensorY, OwnerIndex),
+		SensorGridUserChannelCount_{ParameterName},
+		ChannelIndex,
+		UserData,
+		IsValid);
+}
+
+void WriteSensorUserChannel_{ParameterName}_UEImpureCall(int SensorX, int SensorY, int ChannelIndex, float4 UserData)
+{
+	if (SensorGridWriteIndex_{ParameterName} >= 0)
+	{
+		NDICitySampleSensorGrid_WriteUserChannel(
+			SensorGridDimensions_{ParameterName}.xyz,
+			int3(SensorX, SensorY, SensorGridWriteIndex_{ParameterName}),
+			SensorGridUserChannelCount_{ParameterName},
+			ChannelIndex,
+			UserData,
+			RWSensorGridUserChannelData_{ParameterName});
+	}
+}

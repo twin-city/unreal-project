@@ -1,0 +1,17 @@
+// Copyright Epic Games, Inc. All Rights Reserved.
+
+#pragma once
+
+struct FSensorInfo
+{
+	float3 Location;
+	uint DistanceUint;
+	int3 HitIndex;
+	uint SearchCount;
+};
+
+// Dimensions is the log2 cell count
+int TiledToLinear(uint3 Index, uint2 Dimensions)
+{
+	return Index.x + ((Index.y + (Index.z << Dimensions.y)) << Dimensions.x);
+}

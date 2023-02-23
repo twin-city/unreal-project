@@ -1,0 +1,920 @@
+// Copyright Epic Games, Inc. All Rights Reserved.
+
+#pragma once
+
+#include "/Engine/Private/Common.ush"
+#include "/Engine/Public/Platform.ush"
+#include "CitySampleSensorGridCommon.ush"
+
+////////////////////////////////////////////////////////////////////////////////
+///// Common
+////////////////////////////////////////////////////////////////////////////////
+struct FInternalNode
+{
+	float3 BoundsMin;
+	int LeftChild; // negative value indicates it's a Leaf node: ~LeftChild will be the index into the array
+
+	float3 BoundsMax;
+	int RightChild; // negative value indicates it's a leaf node: ~RightChild wlll be the index into the array
+};
+
+// https://developer.nvidia.com/blog/thinking-parallel-part-iii-tree-construction-gpu/
+
+// Expands a 10-bit integer into 30 bits
+// by inserting 2 zeros after each bit.
+uint ExpandBits(uint v)
+{
+	v = (v * 0x00010001u) & 0xFF0000FFu;
+	v = (v * 0x00000101u) & 0x0F00F00Fu;
+	v = (v * 0x00000011u) & 0xC30C30C3u;
+	v = (v * 0x00000005u) & 0x49249249u;
+	return v;
+}
+
+// Calculates a 32-bit Morton code (incorporating the most significant position bits
+// from the 3 coordinates (9 bits/dim) and the owenr index (5 bits).  Each position 
+// component is assumed to be [0..1)
+uint Morton3d(float3 Location, uint OwnerIndex, uint OwnerBitCount)
+{
+	const uint OwnerMask = (1 << OwnerBitCount) - 1;
+	const uint OwnerShift = 32 - OwnerBitCount;
+	const uint PositionMask = ~(OwnerMask << OwnerShift);
+
+	uint3 Bucket = (uint3) clamp(Location * 512.0f, 0.0f, 511.0f);
+
+	const uint PositionMortonCode = ExpandBits(Bucket.z) + (ExpandBits(Bucket.y) + (ExpandBits(Bucket.x) * 2) * 2);
+
+	return (PositionMortonCode & PositionMask) | ((OwnerIndex & OwnerMask) << OwnerShift);
+}
+
+uint InvalidMorton3d(uint OwnerIndex, uint OwnerBitCount)
+{
+	const uint OwnerMask = (1 << OwnerBitCount) - 1;
+	const uint OwnerShift = 32 - OwnerBitCount;
+	const uint PositionMask = ~(OwnerMask << OwnerShift);
+
+	return PositionMask | ((OwnerIndex & OwnerMask) << OwnerShift);
+}
+
+bool IsMortonCodeValid(uint MortonCode, uint OwnerBitCount)
+{
+	const uint OwnerMask = (1 << OwnerBitCount) - 1;
+	const uint OwnerShift = 32 - OwnerBitCount;
+	const uint PositionMask = ~(OwnerMask << OwnerShift);
+
+	return (MortonCode & PositionMask) != PositionMask;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+///// 
+////////////////////////////////////////////////////////////////////////////////
+#if RESET_SENSOR_LOCATIONS_CS
+
+RWBuffer<float4> SensorsToReset;
+uint SensorCount;
+
+[numthreads(RESET_SENSOR_LOCATIONS_CHUNK_SIZE, 1, 1)]
+void ResetSensorLocations(uint3 DispatchThreadId : SV_DispatchThreadID)
+{
+	const uint SensorIndex = DispatchThreadId.x;
+	if (SensorIndex < SensorCount)
+	{
+		const float3 SensorLocation = float3(0.0f, 0.0f, 0.0f);
+		const float SensorRange = -1.0f;
+		SensorsToReset[SensorIndex] = float4(SensorLocation, SensorRange);
+	}
+}
+#endif
+
+////////////////////////////////////////////////////////////////////////////////
+///// 
+////////////////////////////////////////////////////////////////////////////////
+#if CLEAR_RESULTS_CS
+
+RWStructuredBuffer<FSensorInfo> NearestSensors;
+
+uint SensorCount;
+
+[numthreads(CLEAR_RESULTS_CHUNK_SIZE, 1, 1)]
+void ClearNearestSensors(uint3 DispatchThreadId : SV_DispatchThreadID)
+{
+	const uint SensorIndex = DispatchThreadId.x;
+	if (SensorIndex < SensorCount)
+	{
+		FSensorInfo SensorInfo = (FSensorInfo) 0;
+		SensorInfo.Location = float3(0.0f, 0.0f, 0.0f);
+		SensorInfo.DistanceUint = 0x7F000000;
+		SensorInfo.HitIndex = int3(-1, -1, -1);
+		SensorInfo.SearchCount = 0;
+
+		NearestSensors[SensorIndex] = SensorInfo;
+	}
+}
+#endif
+
+////////////////////////////////////////////////////////////////////////////////
+///// Processes a chunk of sensors and aggregates an AABB bounding box for all
+///// provided locations.
+////////////////////////////////////////////////////////////////////////////////
+#if PRIME_BOUNDS_GENERATION_CS
+
+Buffer<float4> SensorLocations;
+RWBuffer<float4> PartialBoundingBoxes;
+
+uint SensorCount;
+uint PaddedIntermediateCount;
+
+groupshared bool SharedMinMaxMask[PRIME_BOUNDS_CHUNK_SIZE];
+groupshared float3 SharedAccumulatedMin[PRIME_BOUNDS_CHUNK_SIZE];
+groupshared float3 SharedAccumulatedMax[PRIME_BOUNDS_CHUNK_SIZE];
+
+[numthreads(PRIME_BOUNDS_CHUNK_SIZE, 1, 1)]
+void PrimeBounds(uint GroupIndex : SV_GroupIndex, uint3 GroupId : SV_GroupID, uint3 DispatchThreadId : SV_DispatchThreadID)
+{
+	const uint OwnerIndex = DispatchThreadId.y;
+
+	float4 SensorLocation;
+	SensorLocation.w = float4(0.0f, 0.0f, 0.0f, -1.0f);
+
+	if (DispatchThreadId.x < SensorCount)
+	{
+		SensorLocation = SensorLocations[OwnerIndex * SensorCount + DispatchThreadId.x];
+	}
+
+	if (SensorLocation.w >= 0.0f)
+	{
+		SharedAccumulatedMin[GroupIndex] = SensorLocation.xyz - SensorLocation.www;
+		SharedAccumulatedMax[GroupIndex] = SensorLocation.xyz + SensorLocation.www;
+		SharedMinMaxMask[GroupIndex] = true;
+	}
+	else
+	{
+		SharedMinMaxMask[GroupIndex] = false;
+	}
+
+	GroupMemoryBarrierWithGroupSync();
+
+	for (uint Stride = PRIME_BOUNDS_CHUNK_SIZE >> 1; Stride > 0; Stride >>= 1)
+	{
+		if (GroupIndex < Stride)
+		{
+			if (SharedMinMaxMask[GroupIndex + Stride])
+			{
+				if (SharedMinMaxMask[GroupIndex])
+				{
+					SharedAccumulatedMin[GroupIndex] = min(SharedAccumulatedMin[GroupIndex], SharedAccumulatedMin[GroupIndex + Stride]);
+					SharedAccumulatedMax[GroupIndex] = max(SharedAccumulatedMax[GroupIndex], SharedAccumulatedMax[GroupIndex + Stride]);
+				}
+				else
+				{
+					SharedMinMaxMask[GroupIndex] = true;
+					SharedAccumulatedMin[GroupIndex] = SharedAccumulatedMin[GroupIndex + Stride];
+					SharedAccumulatedMax[GroupIndex] = SharedAccumulatedMax[GroupIndex + Stride];
+				}
+			}
+		}
+
+		// note that knowing the warp size we could unroll some of the above loops to avoid the following sync
+		GroupMemoryBarrierWithGroupSync();
+	}
+
+	if (GroupIndex == 0)
+	{
+		if (SharedMinMaxMask[0])
+		{
+			PartialBoundingBoxes[(PaddedIntermediateCount * OwnerIndex + GroupId.x) * 2 + 0] = float4(SharedAccumulatedMin[0], 0.0f);
+			PartialBoundingBoxes[(PaddedIntermediateCount * OwnerIndex + GroupId.x) * 2 + 1] = float4(SharedAccumulatedMax[0], 0.0f);
+		}
+		else
+		{
+			// nothing in this thread group had a valid sensor
+			PartialBoundingBoxes[(PaddedIntermediateCount * OwnerIndex + GroupId.x) * 2 + 0] = float4(INFINITE_FLOAT.xxx, 0.0f);
+			PartialBoundingBoxes[(PaddedIntermediateCount * OwnerIndex + GroupId.x) * 2 + 1] = float4(-INFINITE_FLOAT.xxx, 0.0f);
+		}
+	}
+}
+
+#endif // PRIME_BOUNDS_GENERATION_CS
+
+////////////////////////////////////////////////////////////////////////////////
+///// Finishes up generation of bounds, storing the results as min & full extent
+////////////////////////////////////////////////////////////////////////////////
+#if FINALIZE_BOUNDS_CS
+
+Buffer<float4> SourceBoundingBoxes;
+RWBuffer<float4> TargetBoundingBoxes;
+
+uint SourceBoundsCount;
+uint PaddedSourceBoundsCount;
+
+groupshared float3 SharedAccumulatedMin[FINALIZE_BOUNDS_CHUNK_SIZE];
+groupshared float3 SharedAccumulatedMax[FINALIZE_BOUNDS_CHUNK_SIZE];
+
+[numthreads(FINALIZE_BOUNDS_CHUNK_SIZE, 1, 1)]
+void FinalizeBounds(uint GroupIndex : SV_GroupIndex, uint3 GroupId : SV_GroupID)
+{
+	const uint OwnerIndex = GroupId.x;
+	const uint ReadOffset = 2 * OwnerIndex * PaddedSourceBoundsCount;
+
+	float3 LocalAccumulatedMin = INFINITE_FLOAT;
+	float3 LocalAccumulatedMax = -INFINITE_FLOAT;
+
+	for (uint StartIt = 0; StartIt < SourceBoundsCount; StartIt += FINALIZE_BOUNDS_CHUNK_SIZE)
+	{
+		if ((StartIt + GroupIndex) < SourceBoundsCount)
+		{
+			SharedAccumulatedMin[GroupIndex] = SourceBoundingBoxes[ReadOffset + 2 * (StartIt + GroupIndex) + 0].xyz;
+			SharedAccumulatedMax[GroupIndex] = SourceBoundingBoxes[ReadOffset + 2 * (StartIt + GroupIndex) + 1].xyz;
+		}
+		else
+		{
+			SharedAccumulatedMin[GroupIndex] = INFINITE_FLOAT.xxx;
+			SharedAccumulatedMax[GroupIndex] = -INFINITE_FLOAT.xxx;
+		}
+
+		GroupMemoryBarrierWithGroupSync();
+
+		// parallel reduce with the result being accumulated in the local version
+		for (uint Stride = (FINALIZE_BOUNDS_CHUNK_SIZE >> 1); Stride > 0; Stride >>= 1)
+		{
+			if (GroupIndex < Stride && (GroupIndex + Stride < SourceBoundsCount))
+			{
+				SharedAccumulatedMin[GroupIndex] = min(SharedAccumulatedMin[GroupIndex], SharedAccumulatedMin[GroupIndex + Stride]);
+				SharedAccumulatedMax[GroupIndex] = max(SharedAccumulatedMax[GroupIndex], SharedAccumulatedMax[GroupIndex + Stride]);
+			}
+
+			GroupMemoryBarrierWithGroupSync();
+		}
+
+		if (GroupIndex == 0)
+		{
+			LocalAccumulatedMin = min(LocalAccumulatedMin, SharedAccumulatedMin[0]);
+			LocalAccumulatedMax = max(LocalAccumulatedMax, SharedAccumulatedMax[0]);
+		}
+	}
+
+	if (GroupIndex == 0)
+	{
+		TargetBoundingBoxes[OwnerIndex * 2 + 0] = float4(LocalAccumulatedMin, 0.0f);
+		TargetBoundingBoxes[OwnerIndex * 2 + 1] = float4(LocalAccumulatedMax - LocalAccumulatedMin, 0.0f);
+	}
+}
+
+#endif // FINALIZE_BOUNDS_CS
+
+////////////////////////////////////////////////////////////////////////////////
+///// Uses the provided bounds to generate an unordered list of tuples of the
+///// form: {index, mortoncode}
+////////////////////////////////////////////////////////////////////////////////
+#if MORTON_GENERATTION_CS
+
+Buffer<float4> SensorLocations;
+Buffer<float4> BoundingBoxes;
+RWBuffer<uint> LeafIndices;
+RWBuffer<uint> MortonCodes;
+
+uint SensorCount;
+uint PaddedOutputCount;
+uint OwnerBitCount;
+
+[numthreads(MORTON_GENERATION_CHUNK_SIZE, 1, 1)]
+void MortonGeneration(uint3 DispatchThreadId : SV_DispatchThreadID)
+{
+	const uint InputIndex = DispatchThreadId.x;
+	if (InputIndex >= SensorCount)
+	{
+		return;
+	}
+
+	const uint OwnerIndex = DispatchThreadId.y;
+	const uint GlobalSensorIndex = OwnerIndex * SensorCount + InputIndex;
+	const uint PaddedOutputIndex = OwnerIndex * PaddedOutputCount + InputIndex;
+
+	float3 BoundsMin = BoundingBoxes[OwnerIndex * 2 + 0].xyz;
+	float3 BoundsExtent = BoundingBoxes[OwnerIndex * 2 + 1].xyz;
+
+	float4 SensorLocation = SensorLocations[GlobalSensorIndex];
+	if (SensorLocation.w >= 0.0f)
+	{
+		// normalize the sensor's location based on it's AABB
+		const uint MortonCode = Morton3d((SensorLocation.xyz - BoundsMin) / BoundsExtent, OwnerIndex, OwnerBitCount);
+
+		LeafIndices[PaddedOutputIndex] = InputIndex;
+		MortonCodes[PaddedOutputIndex] = MortonCode;
+	}
+	else
+	{
+		// how do we treat invalid sensors here?  set the index to 0xFFFFFFFF and the morton code
+		// to the largest value (but need to include the owner tag so things get sorted into the
+		// right group)
+		LeafIndices[PaddedOutputIndex] = 0xFFFFFFFF;
+		MortonCodes[PaddedOutputIndex] = InvalidMorton3d(OwnerIndex, OwnerBitCount);
+	}
+}
+
+#endif // MORTON_GENERATION_CS
+
+////////////////////////////////////////////////////////////////////////////////
+///// Compacts the morton codes down to the unique set
+////////////////////////////////////////////////////////////////////////////////
+#if MORTON_COMPACTION_CS
+
+Buffer<uint> InputValues;
+RWBuffer<uint> OutputValues;
+RWBuffer<uint> DuplicateCounts;
+
+uint OwnerBitCount;
+uint ValueCount;
+
+groupshared bool ValidValues[MORTON_COMPACTION_CHUNK_SIZE];
+groupshared uint LocalValues[MORTON_COMPACTION_CHUNK_SIZE];
+groupshared uint ShiftAmount[MORTON_COMPACTION_CHUNK_SIZE];
+
+[numthreads(MORTON_COMPACTION_CHUNK_SIZE, 1, 1)]
+void MortonCompaction(uint3 GroupId : SV_GroupID, uint GroupIndex : SV_GroupIndex, uint3 DispatchThreadId : SV_DispatchThreadID)
+{
+	const uint GlobalIndex = DispatchThreadId.x;
+
+	// mark all appropriate entries as valid and copy their values to the local store
+	if (GlobalIndex < ValueCount && IsMortonCodeValid(InputValues[GlobalIndex], OwnerBitCount))
+	{
+		LocalValues[GroupIndex] = InputValues[GlobalIndex];
+		ValidValues[GroupIndex] = true;
+	}
+	else
+	{
+		ValidValues[GroupIndex] = false;
+	}
+
+	GroupMemoryBarrierWithGroupSync();
+
+	// check for duplicates with the previous entry
+	if (GroupIndex > 0)
+	{
+		if (ValidValues[GroupIndex])
+		{
+			if (LocalValues[GroupIndex] == LocalValues[GroupIndex - 1])
+			{
+				ValidValues[GroupIndex] = false;
+			}
+		}
+	}
+
+	GroupMemoryBarrierWithGroupSync();
+
+	// serial pass with the first thread actually assigning ShiftAmounts
+	uint ShiftCount = 0;
+	if (GroupIndex == 0)
+	{
+		for (int i = 0; i < MORTON_COMPACTION_CHUNK_SIZE; ++i)
+		{
+			if (ValidValues[i])
+			{
+				ShiftAmount[i] = ShiftCount;
+			}
+			else
+			{
+				++ShiftCount;
+			}
+		}
+	}
+
+	GroupMemoryBarrierWithGroupSync();
+
+	// copy/shift the data to the output
+	if (ValidValues[GroupIndex])
+	{
+		const uint GroupOffset = GroupId.x * MORTON_COMPACTION_CHUNK_SIZE;
+		OutputValues[GroupOffset + GroupIndex - ShiftAmount[GroupIndex]] = LocalValues[GroupIndex];
+	}
+
+	// report how many entries have been removed
+	if (GroupIndex == 0)
+	{
+		DuplicateCounts[GroupId.x] = ShiftCount;
+	}
+}
+#endif // MORTON_COMPACTION_CS
+
+////////////////////////////////////////////////////////////////////////////////
+///// Shuffles the result of a 
+////////////////////////////////////////////////////////////////////////////////
+#if MORTON_BUILD_COPY_COMMANDS_CS
+Buffer<uint> DuplicateCounts;
+Buffer<uint> CompactedValues;
+RWBuffer<uint4> CopyCommands;
+RWBuffer<uint> ElementsPerOwner;
+
+uint OwnersCount;
+uint GroupsPerOwner;
+uint MaxElementsPerGroup;
+
+[numthreads(1, 1, 1)]
+void BuildCopyCommands(uint3 GroupId : SV_GroupID, uint GroupIndex : SV_GroupIndex, uint3 DispatchThreadId : SV_DispatchThreadID)
+{
+	const uint OwnerIndex = GroupId.x;
+	const uint GroupOffset = OwnerIndex * GroupsPerOwner;
+
+	const uint TargetOffsetStart = GroupOffset * MaxElementsPerGroup;
+	uint TargetOffset = TargetOffsetStart;
+	uint LastValueCopied = 0;
+
+	for (uint GroupIt = 0; GroupIt < GroupsPerOwner; ++GroupIt)
+	{
+		uint SourceOffset = MaxElementsPerGroup * (GroupOffset + GroupIt);
+		uint ElementsToCopy = MaxElementsPerGroup - DuplicateCounts[GroupOffset + GroupIt];
+
+		// if we've already copied something then see if we need to trim our first value
+		if (TargetOffset != TargetOffsetStart)
+		{
+			uint FirstValueToCopy = CompactedValues[SourceOffset];
+			if (LastValueCopied == FirstValueToCopy)
+			{
+				++SourceOffset;
+				--ElementsToCopy;
+			}
+		}
+
+		CopyCommands[GroupOffset + GroupIt] = uint4(SourceOffset, TargetOffset, ElementsToCopy, 0);
+		TargetOffset += ElementsToCopy;
+
+		if (ElementsToCopy)
+		{
+			LastValueCopied = CompactedValues[SourceOffset + ElementsToCopy - 1];
+		}
+	}
+
+	ElementsPerOwner[OwnerIndex] = TargetOffset - GroupOffset * MaxElementsPerGroup;
+}
+
+#endif // MORTON_BUILD_COPY_COMMANDS_CS
+
+////////////////////////////////////////////////////////////////////////////////
+///// Shuffles the result of a 
+////////////////////////////////////////////////////////////////////////////////
+#if MORTON_SHUFFLE_DATA_CS
+
+Buffer<uint> InputValues;
+Buffer<uint4> CopyCommands;
+RWBuffer<uint> OutputValues;
+
+[numthreads(MORTON_SHUFFLE_CHUNK_SIZE, 1, 1)]
+void MortonShuffleData(uint3 GroupId : SV_GroupID, uint GroupIndex : SV_GroupIndex, uint3 DispatchThreadId : SV_DispatchThreadID)
+{
+	const uint4 CopyCommand = CopyCommands[GroupId.x];
+	const uint SourceOffset = CopyCommand.x;
+	const uint TargetOffset = CopyCommand.y;
+	const uint ElementsToCopy = CopyCommand.z;
+
+	if (GroupIndex < ElementsToCopy)
+	{
+		OutputValues[TargetOffset + GroupIndex] = InputValues[SourceOffset + GroupIndex];
+	}
+}
+
+#endif // MORTON_SHUFFLE_DATA_CS
+
+
+////////////////////////////////////////////////////////////////////////////////
+///// Stitches the subtrees generated into the final full tree
+////////////////////////////////////////////////////////////////////////////////
+#if HIERARCHY_GENERATION_TOP_DOWN_CS
+
+Buffer<uint> LeafCounts;
+Buffer<uint> LeafIndices;
+Buffer<uint> MortonCodes;
+RWStructuredBuffer<FInternalNode> InternalNodes;
+RWBuffer<uint> ParentIndices;
+RWBuffer<uint> AccumulationGates;
+
+uint InternalNodeParentOffset;
+uint PaddedLeafNodeCount;
+uint PaddedInternalNodeCount;
+uint PaddedParentCount;
+
+int CountLeadingZeroes(uint Value)
+{
+	return 32 - firstbithigh(Value);
+}
+
+int DeltaFunction(uint OwnerIndex, uint I, uint MortonI, int J)
+{
+	if (J < 0 || J > (int) (LeafCounts[OwnerIndex] - 1))
+	{
+		return -1;
+	}
+
+	const uint LeafOffset = OwnerIndex * PaddedLeafNodeCount;
+	const uint MortonJ = MortonCodes[LeafOffset + J];
+
+	if (MortonI == MortonJ)
+	{
+		return 32 + CountLeadingZeroes(I ^ (uint)J);
+	}
+
+	return CountLeadingZeroes(MortonI ^ MortonJ);
+}
+
+uint2 DetermineRootRange(uint OwnerIndex)
+{
+	const uint LeafOffset = OwnerIndex * PaddedLeafNodeCount;
+	const uint InternalNodeCount = LeafCounts[OwnerIndex] - 1;
+
+	return uint2(0, InternalNodeCount);
+}
+
+uint2 DetermineRange(uint OwnerIndex, int LocalNodeIndex, uint CurrentKey)
+{
+	const int ReverseCount = DeltaFunction(OwnerIndex, LocalNodeIndex, CurrentKey, LocalNodeIndex - 1);
+	const int ForwardCount = DeltaFunction(OwnerIndex, LocalNodeIndex, CurrentKey, LocalNodeIndex + 1);
+
+	const bool ForwardSearch = (ForwardCount > ReverseCount);
+	const int Dir = ForwardSearch ? 1 : -1;
+	const int MinCount = ForwardSearch ? ReverseCount : ForwardCount;
+
+	int GrowthStride = 2;
+	while (DeltaFunction(OwnerIndex, LocalNodeIndex, CurrentKey, LocalNodeIndex + Dir * GrowthStride) > MinCount)
+	{
+		GrowthStride <<= 4;
+	}
+
+	int Increment = 0;
+	for (int ShrinkStride = GrowthStride >> 1; ShrinkStride > 0; ShrinkStride >>= 1)
+	{
+		if (DeltaFunction(OwnerIndex, LocalNodeIndex, CurrentKey, LocalNodeIndex + Dir * (ShrinkStride + Increment)) > MinCount)
+		{
+			Increment += ShrinkStride;
+		}
+	}
+
+	if (ForwardSearch)
+	{
+		return uint2(LocalNodeIndex, LocalNodeIndex + Increment);
+	}
+	return uint2(LocalNodeIndex - Increment, LocalNodeIndex);
+}
+
+uint FindSplit(uint OwnerIndex, uint LeftIndex, uint RightIndex)
+{
+	const uint LeafOffset = OwnerIndex * PaddedLeafNodeCount;
+
+	const uint LeftKey = MortonCodes[LeafOffset + LeftIndex];
+	const uint RightKey = MortonCodes[LeafOffset + RightIndex];
+
+	if (LeftKey == RightKey)
+	{
+		return (LeftIndex + RightIndex) >> 1;
+	}
+
+	const int PrefixCount = CountLeadingZeroes(LeftKey ^ RightKey);
+
+	uint Split = LeftIndex;
+	uint Stride = RightIndex - LeftIndex;
+
+	do
+	{
+		Stride = (Stride + 1) >> 1;
+		if (Split + Stride < RightIndex)
+		{
+			if (DeltaFunction(OwnerIndex, LeftIndex, LeftKey, Split + Stride) > PrefixCount)
+			{
+				Split += Stride;
+			}
+		}
+	}
+	while (Stride > 1);
+
+	return Split;
+}
+
+[numthreads(HIERARCHY_GENERATION_CHUNK_SIZE, 1, 1)]
+void HierarchyGeneration_TopDown(uint3 GroupId : SV_GroupID, uint GroupIndex : SV_GroupIndex, uint3 DispatchThreadId : SV_DispatchThreadID)
+{
+	const uint OwnerIndex = DispatchThreadId.y;
+	const uint LocalNodeIndex = DispatchThreadId.x;
+	const uint LeafCount = LeafCounts[OwnerIndex];
+	const uint GlobalNodeIndex = OwnerIndex * PaddedInternalNodeCount + LocalNodeIndex;
+
+	if (!LeafCount)
+	{
+		// make an empty root node
+		if (LocalNodeIndex == 0)
+		{
+			InternalNodes[GlobalNodeIndex].BoundsMin = INFINITE_FLOAT.xxx;
+			InternalNodes[GlobalNodeIndex].LeftChild = 0;
+			InternalNodes[GlobalNodeIndex].BoundsMax = -INFINITE_FLOAT.xxx;
+			InternalNodes[GlobalNodeIndex].RightChild = 0;
+		}
+
+		return;
+	}
+
+	const uint InternalNodeCount = LeafCount - 1;
+
+	if (LocalNodeIndex >= InternalNodeCount)
+	{
+		return;
+	}
+
+	const uint LeafOffset = OwnerIndex * PaddedLeafNodeCount;
+	const uint ParentOffset = OwnerIndex * PaddedParentCount;
+
+	// initialize the bounds
+	InternalNodes[GlobalNodeIndex].BoundsMin = INFINITE_FLOAT.xxx;
+	InternalNodes[GlobalNodeIndex].BoundsMax = -INFINITE_FLOAT.xxx;
+	AccumulationGates[GlobalNodeIndex] = 0;
+
+	const uint CurrentKey = MortonCodes[LeafOffset + LocalNodeIndex];
+
+	if (!LocalNodeIndex)
+	{
+		ParentIndices[ParentOffset + InternalNodeParentOffset] = 0xFFFFFFFF;
+	}
+
+	const uint2 Range = LocalNodeIndex
+		? DetermineRange(OwnerIndex, (int) LocalNodeIndex, CurrentKey)
+		: DetermineRootRange(OwnerIndex);
+
+	const uint SplitIndex = FindSplit(OwnerIndex, Range.x, Range.y);
+
+	if (SplitIndex == Range.x)
+	{
+		// leaf
+		const uint LeafIndex = LeafIndices[PaddedLeafNodeCount * OwnerIndex + SplitIndex];
+		InternalNodes[GlobalNodeIndex].LeftChild = (int)((LeafIndex == 0xFFFFFFFF) ? 0 : ~LeafIndex);
+		ParentIndices[ParentOffset + SplitIndex] = LocalNodeIndex;
+	}
+	else
+	{
+		// internal node
+		InternalNodes[GlobalNodeIndex].LeftChild = SplitIndex;
+		ParentIndices[ParentOffset + InternalNodeParentOffset + SplitIndex] = LocalNodeIndex;
+	}
+
+	if ((SplitIndex + 1) == Range.y)
+	{
+		// leaf
+		const uint LeafIndex = LeafIndices[PaddedLeafNodeCount * OwnerIndex + SplitIndex + 1];
+		InternalNodes[GlobalNodeIndex].RightChild = (int)((LeafIndex == 0xFFFFFFFF) ? 0 : ~LeafIndex);
+		ParentIndices[ParentOffset + SplitIndex + 1] = LocalNodeIndex;
+	}
+	else
+	{
+		// internal node
+		InternalNodes[GlobalNodeIndex].RightChild = SplitIndex + 1;
+		ParentIndices[ParentOffset + InternalNodeParentOffset + SplitIndex + 1] = LocalNodeIndex;
+	}
+}
+
+#endif // HIERARCHY_GENERATION_TOP_DOWN_CS
+
+////////////////////////////////////////////////////////////////////////////////
+///// 
+////////////////////////////////////////////////////////////////////////////////
+#if BOUNDS_GENERATION_BOTTOM_UP_CS
+
+Buffer<uint> SensorCounts;
+Buffer<float4> SensorLocations;
+Buffer<uint> ParentIndices;
+globallycoherent RWStructuredBuffer<FInternalNode> InternalNodes;
+RWBuffer<uint> AccumulationGates;
+
+uint InternalNodeParentOffset;
+uint MaxSensorsPerOwner;
+uint PaddedInternalNodeCount;
+uint PaddedParentCount;
+
+void AggregateBounds(uint OwnerIndex, int ChildIndex, inout float3 BoundsMin, inout float3 BoundsMax)
+{
+	if (ChildIndex < 0)
+	{
+		const float4 SensorLocation = SensorLocations[OwnerIndex * MaxSensorsPerOwner + ~ChildIndex];
+		if (SensorLocation.w >= 0)
+		{
+			BoundsMin = min(BoundsMin, SensorLocation.xyz - SensorLocation.www);
+			BoundsMax = max(BoundsMax, SensorLocation.xyz + SensorLocation.www);
+		}
+	}
+	else if (ChildIndex)
+	{
+		BoundsMin = min(BoundsMin, InternalNodes[OwnerIndex * PaddedInternalNodeCount + ChildIndex].BoundsMin);
+		BoundsMax = max(BoundsMax, InternalNodes[OwnerIndex * PaddedInternalNodeCount + ChildIndex].BoundsMax);
+	}
+}
+
+[numthreads(BOUNDS_GENERATION_CHUNK_SIZE, 1, 1)]
+void BoundsGeneration_BottomUp(uint3 GroupId : SV_GroupID, uint GroupIndex : SV_GroupIndex, uint3 DispatchThreadId : SV_DispatchThreadID)
+{
+	const uint LeafNodeIndex = DispatchThreadId.x;
+	const uint OwnerIndex = DispatchThreadId.y;
+
+	const uint LeafNodeCount = SensorCounts[OwnerIndex];
+
+	if (LeafNodeIndex >= LeafNodeCount)
+	{
+		return;
+	}
+
+	uint ParentIndex = ParentIndices[OwnerIndex * PaddedParentCount + LeafNodeIndex];
+
+	do
+	{
+		const uint GlobalNodeIndex = OwnerIndex * PaddedInternalNodeCount + ParentIndex;
+
+		uint LockCount;
+		InterlockedAdd(AccumulationGates[GlobalNodeIndex], 1, LockCount);
+
+		if (LockCount == 0)
+		{
+			break;
+		}
+
+		float3 ChildBoundsMin = INFINITE_FLOAT.xxx;
+		float3 ChildBoundsMax = -INFINITE_FLOAT.xxx;
+
+		AggregateBounds(OwnerIndex, InternalNodes[GlobalNodeIndex].LeftChild, ChildBoundsMin, ChildBoundsMax);
+		AggregateBounds(OwnerIndex, InternalNodes[GlobalNodeIndex].RightChild, ChildBoundsMin, ChildBoundsMax);
+
+		InternalNodes[GlobalNodeIndex].BoundsMin = ChildBoundsMin;
+		InternalNodes[GlobalNodeIndex].BoundsMax = ChildBoundsMax;
+
+		if (ParentIndex == 0)
+		{
+			break;
+		}
+
+		ParentIndex = ParentIndices[OwnerIndex * PaddedParentCount + InternalNodeParentOffset + ParentIndex];
+	} while (ParentIndex != 0xFFFFFFFF);
+}
+
+#endif // BOUNDS_GENERATION_BOTTOM_UP_CS
+
+////////////////////////////////////////////////////////////////////////////////
+///// 
+////////////////////////////////////////////////////////////////////////////////
+#if BVH_TRAVERSAL_CS
+
+#if !defined(MAX_SENSOR_COUNT_LOG_TWO)
+	#error MAX_SENSOR_COUNT_LOG_TWO is not defined
+#endif
+
+#if !defined(BVH_TRAVERSAL_STACK_SLACK_SIZE)
+	#error BVH_TRAVERSAL_STACK_SLACK_SIZE is not defined
+#endif
+
+// Need enough space in the stack for 1 entry per internal layer of the binary tree
+// plus one additional one for the current layer during traversal.  For a fully
+// balanced tree we would use Log2(NodeCount), but there's no guarantee about the
+// tree actually being perfectly balanced so we need to add some slack.  Because
+// the stack size is one of the driving factors for the VGPR usage we still need
+// to be cautious.
+// Currently we'll evaluate the stack size and end the search early if we would
+// exceed our limited depth.
+#define BVH_TRAVERSAL_STACK_SIZE (MAX_SENSOR_COUNT_LOG_TWO + BVH_TRAVERSAL_STACK_SLACK_SIZE)
+
+Buffer<uint> SensorCounts;
+Buffer<float4> SensorLocations;
+StructuredBuffer<FInternalNode> InternalNodes;
+RWStructuredBuffer<FSensorInfo> NearestSensors;
+
+float MaxDistance;
+uint MaxSensorsPerOwner;
+uint PaddedSensorCount;
+uint PaddedInternalNodeCount;
+uint OwnerCount;
+uint SensorGridFactor;
+
+struct FClosestSensorInfo
+{
+	uint DistanceSqrUint;
+	uint SensorIndex;
+	uint OwnerIndex;
+};
+
+float4 RetrieveSensorLocation(uint SensorIndex, uint OwnerIndex)
+{
+	checkBufferAccessSlow(SensorLocations, OwnerIndex * MaxSensorsPerOwner + SensorIndex);
+	return SensorLocations[OwnerIndex * MaxSensorsPerOwner + SensorIndex];
+}
+
+bool TestOverlap(FInternalNode Node, float3 SensorLocation, uint RadiusSqrUint)
+{
+	const float3 NodeBoundsCenter = 0.5f * (Node.BoundsMin + Node.BoundsMax);
+	const float3 NodeBoundsExtent = NodeBoundsCenter - Node.BoundsMin;
+
+	const float3 AxisDistances = max(abs(SensorLocation - NodeBoundsCenter) - NodeBoundsExtent, 0);
+	return asuint(dot(AxisDistances, AxisDistances)) < RadiusSqrUint;
+}
+
+void TestLeaf(uint TargetLeafIndex, uint TargetOwner, float3 SourceSensorLocation, inout FClosestSensorInfo ClosestInfo)
+{
+	const float4 TargetSensorLocation = RetrieveSensorLocation(TargetLeafIndex, TargetOwner);
+
+	if (TargetSensorLocation.w >= 0.0f)
+	{
+		const float3 Delta = TargetSensorLocation.xyz - SourceSensorLocation;
+		const uint DeltaSqrUint = asuint(max(0, dot(Delta, Delta) - TargetSensorLocation.w));
+
+		if (DeltaSqrUint < ClosestInfo.DistanceSqrUint)
+		{
+			ClosestInfo.DistanceSqrUint = DeltaSqrUint;
+			ClosestInfo.SensorIndex = TargetLeafIndex;
+			ClosestInfo.OwnerIndex = TargetOwner;
+		}
+	}
+}
+
+void TraverseBvh(float3 SensorLocation, uint TargetOwner, inout FClosestSensorInfo ResultsInfo)
+{
+	uint DepthFirstStack[BVH_TRAVERSAL_STACK_SIZE];
+	uint StackIndex = 0;
+
+	uint CurrentNodeIndex = 0; // RootNode
+
+	// debug counter to catch infinite loops
+	uint SearchCount = 0;
+
+	while (1)
+	{
+		++SearchCount;
+		checkSlow(SearchCount < PaddedInternalNodeCount);
+
+		checkStructuredBufferAccessSlow(InternalNodes, PaddedInternalNodeCount * TargetOwner + CurrentNodeIndex);
+		const FInternalNode CurrentNode = InternalNodes[PaddedInternalNodeCount * TargetOwner + CurrentNodeIndex];
+
+		if (TestOverlap(CurrentNode, SensorLocation, ResultsInfo.DistanceSqrUint))
+		{
+			if (CurrentNode.LeftChild < 0)
+			{
+				TestLeaf((uint) ~CurrentNode.LeftChild, TargetOwner, SensorLocation, ResultsInfo);
+			}
+			else if (CurrentNode.LeftChild && StackIndex < BVH_TRAVERSAL_STACK_SIZE)
+			{
+				checkSlow(StackIndex < BVH_TRAVERSAL_STACK_SIZE);
+				DepthFirstStack[StackIndex++] = (uint) CurrentNode.LeftChild;
+			}
+
+			if (CurrentNode.RightChild < 0)
+			{
+				TestLeaf((uint) ~CurrentNode.RightChild, TargetOwner, SensorLocation, ResultsInfo);
+			}
+			else if (CurrentNode.RightChild && StackIndex < BVH_TRAVERSAL_STACK_SIZE)
+			{
+				checkSlow(StackIndex < BVH_TRAVERSAL_STACK_SIZE);
+				DepthFirstStack[StackIndex++] = (uint) CurrentNode.RightChild;
+			}
+		}
+
+		if (StackIndex == 0)
+		{
+			break;
+		}
+
+		CurrentNodeIndex = DepthFirstStack[--StackIndex];
+	}
+}
+
+[numthreads(BVH_TRAVERSAL_CHUNK_SIZE, 1, 1)]
+void BvhTraversal(uint3 GroupId : SV_GroupID, uint GroupIndex : SV_GroupIndex, uint3 DispatchThreadId : SV_DispatchThreadID)
+{
+	const uint SensorIndex = DispatchThreadId.x;
+	const uint OwnerIndex = GroupId.y;
+
+	const float4 SourceSensor = RetrieveSensorLocation(SensorIndex, OwnerIndex);
+	if (SourceSensor.w < 0.0f)
+	{
+		return;
+	}
+
+	FClosestSensorInfo ClosestSensorInfo;
+	ClosestSensorInfo.DistanceSqrUint = asuint(SourceSensor.w * SourceSensor.w + MaxDistance * MaxDistance);
+	ClosestSensorInfo.SensorIndex = 0;
+	ClosestSensorInfo.OwnerIndex = OwnerIndex;
+
+	for (uint OwnerOffset = 1; OwnerOffset < OwnerCount; ++OwnerOffset)
+	{
+		const uint TargetOwner = (OwnerIndex + OwnerOffset) >= OwnerCount ? (OwnerIndex + OwnerOffset - OwnerCount) : OwnerIndex + OwnerOffset;
+
+		TraverseBvh(SourceSensor.xyz, TargetOwner, ClosestSensorInfo);
+	}
+
+	if (ClosestSensorInfo.OwnerIndex != OwnerIndex)
+	{
+		const uint SensorMask = (1 << SensorGridFactor) - 1;
+
+		// write out the result
+		FSensorInfo SensorInfo;
+		SensorInfo.Location = RetrieveSensorLocation(ClosestSensorInfo.SensorIndex, ClosestSensorInfo.OwnerIndex).xyz;
+		SensorInfo.DistanceUint = asuint(sqrt(asfloat(ClosestSensorInfo.DistanceSqrUint)));
+		SensorInfo.HitIndex = uint3(
+			ClosestSensorInfo.SensorIndex & SensorMask,
+			ClosestSensorInfo.SensorIndex >> SensorGridFactor,
+			ClosestSensorInfo.OwnerIndex);
+		SensorInfo.SearchCount = 0;
+
+		checkStructuredBufferAccessSlow(NearestSensors, OwnerIndex * MaxSensorsPerOwner + SensorIndex);
+		NearestSensors[OwnerIndex * MaxSensorsPerOwner + SensorIndex] = SensorInfo;
+	}
+}
+
+#endif // BVH_TRAVERSAL_CS

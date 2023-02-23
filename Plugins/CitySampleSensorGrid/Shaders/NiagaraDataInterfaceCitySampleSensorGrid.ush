@@ -1,0 +1,79 @@
+// Copyright Epic Games, Inc. All Rights Reserved.
+
+#pragma once
+
+#include "CitySampleSensorGridCommon.ush"
+
+bool IsValidSensorIndex(int3 SensorIndex, uint3 SensorGridFactors)
+{
+	return SensorIndex.x < (1 << SensorGridFactors.x)
+		&& SensorIndex.x >= 0
+		&& SensorIndex.y < (1 << SensorGridFactors.y)
+		&& SensorIndex.y >= 0
+		&& SensorIndex.z < SensorGridFactors.z
+		&& SensorIndex.z >= 0;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+///// Writes a particles location to the BoundsHierarchy
+////////////////////////////////////////////////////////////////////////////////
+void NDICitySampleSensorGrid_UpdateSensorGpu(uint3 SensorGridDimensions, int3 SensorIndex, float3 SensorLocation, float SensorRange, bool IsValid, RWBuffer<float4> SensorLocations)
+{
+	if (IsValidSensorIndex(SensorIndex, SensorGridDimensions))
+	{
+		if (!IsValid)
+		{
+			SensorLocation = float3(0.0f, 0.0f, 0.0f);
+			SensorRange = -1.0f;
+		}
+
+		SensorLocations[TiledToLinear(SensorIndex, SensorGridDimensions.xy)] = float4(SensorLocation, SensorRange);
+	}
+}
+
+////////////////////////////////////////////////////////////////////////////////
+///// Searches the SensorInfo for previously calculated closest sensor
+////////////////////////////////////////////////////////////////////////////////
+void NDICitySampleSensorGrid_FindNearestGpu(StructuredBuffer<FSensorInfo> SensorInfo, uint3 SensorGridDimensions, int3 SourceSensorIndex, out float3 Location, out float Distance, out int3 TargetSensorIndex, out bool IsValid)
+{
+	if (IsValidSensorIndex(SourceSensorIndex, SensorGridDimensions))
+	{
+		const int LinearSensorIndex = TiledToLinear(SourceSensorIndex, SensorGridDimensions.xy);
+
+		Location = SensorInfo[LinearSensorIndex].Location.xyz;
+		Distance = asfloat(SensorInfo[LinearSensorIndex].DistanceUint);
+
+		TargetSensorIndex = SensorInfo[LinearSensorIndex].HitIndex;
+		IsValid = all(TargetSensorIndex >= 0);
+	}
+	else
+	{
+		IsValid = false;
+	}
+}
+
+////////////////////////////////////////////////////////////////////////////////
+///// 
+////////////////////////////////////////////////////////////////////////////////
+void NDICitySampleSensorGrid_ReadUserChannel(Buffer<float4> UserData, uint3 SensorGridDimensions, int3 SensorIndex, int UserChannelCount, int ChannelIndex, out float4 OutUserData, out bool IsValid)
+{
+	if (IsValidSensorIndex(SensorIndex, SensorGridDimensions))
+	{
+		const int LinearSensorIndex = TiledToLinear(SensorIndex, SensorGridDimensions.xy);
+
+		OutUserData = UserData[LinearSensorIndex * UserChannelCount + ChannelIndex];
+	}
+}
+
+////////////////////////////////////////////////////////////////////////////////
+///// 
+////////////////////////////////////////////////////////////////////////////////
+void NDICitySampleSensorGrid_WriteUserChannel(uint3 SensorGridDimensions, int3 SensorIndex, int UserChannelCount, int ChannelIndex, float4 InUserData, RWBuffer<float4> UserDataBuffer)
+{
+	if (IsValidSensorIndex(SensorIndex, SensorGridDimensions))
+	{
+		const int LinearSensorIndex = TiledToLinear(SensorIndex, SensorGridDimensions.xy);
+
+		UserDataBuffer[LinearSensorIndex * UserChannelCount + ChannelIndex] = InUserData;
+	}
+}
