@@ -46,6 +46,7 @@ jobs:
 
   start:
     name: 🛫 Start Scaleway VM
+    needs: check
     runs-on: ubuntu-22.04
     outputs:
       id: ${{ steps.get_instance_id.outputs.id }}
@@ -144,4 +145,4 @@ jobs:
           SCW_ZONE: fr-par-2
           SCW_REGION: fr-par
         with:
-          args: instance server delete ${{needs.start.outputs.id}} with-ip=true force-shutdown=true
+          args: instance server delete ${{needs.start.outputs.id}} with-volumes=all with-ip=true force-shutdown=true 
