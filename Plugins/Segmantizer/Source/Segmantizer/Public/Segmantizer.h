@@ -26,11 +26,12 @@ class FSegmantizerModule : public IModuleInterface
 	};
 	
 	TQueue<FCaptureRequest> CaptureQueue;
-	FTickerDelegate TickDelegate;
-	FTSTicker::FDelegateHandle TickDelegateHandle;
+	FRequestDelegate RequestDelegate;
+	FDelegateHandle RequestDelegateHandle;
 
 	void ShotCapture(const FString& Filename, const FDateTime& DateTime);
-	
+	bool UnrollQueue();
+
 public:
 	FClassManager ClassManager;
 	
@@ -45,8 +46,8 @@ public:
 
 	void Save();
 
-	void CaptureStart(float CaptureDelay = 0.25f);
+	void CaptureStart();
 	
-	bool CaptureLoop(float DeltaTime);
+	void CaptureLoop();
 	void CaptureEnd();
 };

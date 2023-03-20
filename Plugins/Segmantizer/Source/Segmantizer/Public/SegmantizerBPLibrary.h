@@ -29,7 +29,7 @@ class USegmantizerBPLibrary : public UBlueprintFunctionLibrary
 
 public:
 	UFUNCTION(BlueprintCallable)
-	static void Capture(float CaptureDelay);
+	static void Capture();
 
 	UFUNCTION(BlueprintCallable)
 	static void SetViewToSemantic();

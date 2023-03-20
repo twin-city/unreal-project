@@ -24,7 +24,7 @@ void USegmantizerBPLibrary::Save()
 	FModuleManager::Get().GetModuleChecked<FSegmantizerModule>("Segmantizer").Save();
 }
 
-void USegmantizerBPLibrary::Capture(float CaptureDelay)
+void USegmantizerBPLibrary::Capture()
 {
-	FModuleManager::Get().GetModuleChecked<FSegmantizerModule>("Segmantizer").CaptureStart(CaptureDelay);
+	FModuleManager::Get().GetModuleChecked<FSegmantizerModule>("Segmantizer").CaptureStart();
 }

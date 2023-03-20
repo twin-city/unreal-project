@@ -5,7 +5,6 @@
 #include "ClassManager.h"
 #include "ClassMappingAsset.h"
 #include "Kismet/GameplayStatics.h"
-#include "Editor/EditorEngine.h"
 #include "EditorAssetLibrary.h"
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "Interfaces/IPluginManager.h"
@@ -14,7 +13,7 @@
 
 void FSegmantizerModule::StartupModule()
 {
-	TickDelegate = FTickerDelegate::CreateRaw(this, &FSegmantizerModule::CaptureLoop);
+	RequestDelegate = FRequestDelegate::CreateRaw(this, &FSegmantizerModule::CaptureLoop);
 	
 	const FString Directory = TEXT("/Segmantizer");
 
@@ -43,8 +42,8 @@ void FSegmantizerModule::StartupModule()
 
 void FSegmantizerModule::ShutdownModule()
 {
-	if (TickDelegateHandle.IsValid())
-		FTSTicker::GetCoreTicker().RemoveTicker(TickDelegateHandle);
+	if (RequestDelegateHandle.IsValid())
+		FScreenshotRequest::OnScreenshotRequestProcessed().Remove(RequestDelegateHandle);
 }
 
 void FSegmantizerModule::Save()
@@ -52,10 +51,8 @@ void FSegmantizerModule::Save()
 	UEditorAssetLibrary::SaveLoadedAsset(ClassDataAsset, false);
 }
 
-void FSegmantizerModule::CaptureStart(float CaptureDelay)
+void FSegmantizerModule::CaptureStart()
 {
-	FViewport::SetGameRenderingEnabled(false, 10);
-	
 	const FDateTime Now = FDateTime::Now();
 
 	const FCaptureRequest LitRequest{ "Lit", Now, FRequestDelegate::CreateRaw(this, &FSegmantizerModule::SetViewToLit) };
@@ -64,7 +61,9 @@ void FSegmantizerModule::CaptureStart(float CaptureDelay)
 	const FCaptureRequest SemanticRequest{ "Semantic", Now, FRequestDelegate::CreateRaw(this, &FSegmantizerModule::SetViewToSemantic) };
 	CaptureQueue.Enqueue(SemanticRequest);
 
-	TickDelegateHandle = FTSTicker::GetCoreTicker().AddTicker(TickDelegate, CaptureDelay);
+	RequestDelegateHandle = FScreenshotRequest::OnScreenshotRequestProcessed().Add(RequestDelegate);
+
+	CaptureLoop();
 }
 
 void FSegmantizerModule::ShotCapture(const FString& Filename, const FDateTime& DateTime)
@@ -74,7 +73,7 @@ void FSegmantizerModule::ShotCapture(const FString& Filename, const FDateTime& D
 	FScreenshotRequest::RequestScreenshot(Filename + NowStr, false, false);
 }
 
-bool FSegmantizerModule::CaptureLoop(float DeltaTime)
+bool FSegmantizerModule::UnrollQueue()
 {
 	FCaptureRequest CaptureRequest;
 	if (!CaptureQueue.Dequeue(CaptureRequest))
@@ -91,9 +90,14 @@ bool FSegmantizerModule::CaptureLoop(float DeltaTime)
 	return true;
 }
 
+void FSegmantizerModule::CaptureLoop()
+{
+	if (!UnrollQueue())
+		FScreenshotRequest::OnScreenshotRequestProcessed().Remove(RequestDelegateHandle);
+}
+
 void FSegmantizerModule::CaptureEnd()
 {
-	FViewport::SetGameRenderingEnabled(true);
 	ClassManager.RestoreAll();
 }
 
