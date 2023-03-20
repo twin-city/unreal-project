@@ -1,6 +1,5 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
-
 #include "ClassManager.h"
 #include "Materials/MaterialInstanceConstant.h"
 #include "Factories/MaterialInstanceConstantFactoryNew.h"
@@ -12,8 +11,18 @@ FClassManager::FClassManager()
 	SemanticMaterial = DuplicateObject<UMaterial>(AssetMaterial, nullptr);
 }
 
+FWorldDescriptor& FClassManager::GetCurrentWorldDescriptor()
+{
+	const FWorldContext* WorldContext = GEngine->GetWorldContextFromGameViewport(GEngine->GameViewport);
+
+	// TODO: Clean up invalid worlds
+	return WorldDescriptors.FindOrAdd(WorldContext->World());
+}
+
 void FClassManager::AddActorInstance(AActor* ActorInstance)
 {
+	auto& ActorInstanceDescriptors = GetCurrentWorldDescriptor().ActorInstanceDescriptors;
+	
 	FActorDescriptor& ActorDescriptor = ActorInstanceDescriptors.Emplace(ActorInstance);
 	
 	TArray<UActorComponent*> ActorComponents;
@@ -32,17 +41,28 @@ void FClassManager::AddActorInstance(AActor* ActorInstance)
 
 void FClassManager::AddUniqueActorInstance(AActor* ActorInstance)
 {
+	auto& ActorInstanceDescriptors = GetCurrentWorldDescriptor().ActorInstanceDescriptors;
+
 	if (!ActorInstanceDescriptors.Contains(ActorInstance))
 		AddActorInstance(ActorInstance);
 }
 
-void FClassManager::RemoveActorInstance(const AActor* ActorInstance)
+void FClassManager::RemoveActorInstance(AActor* ActorInstance)
 {
+	RemoveActorConstInstance(ActorInstance);
+}
+
+void FClassManager::RemoveActorConstInstance(const AActor* ActorInstance)
+{
+	auto& ActorInstanceDescriptors = GetCurrentWorldDescriptor().ActorInstanceDescriptors;
+
 	ActorInstanceDescriptors.Remove(ActorInstance);
 }
 
 void FClassManager::PaintActor(const AActor* ToPaint, UMaterialInstanceConstant* Material)
 {
+	auto& ActorInstanceDescriptors = GetCurrentWorldDescriptor().ActorInstanceDescriptors;
+
 	UMaterialInterface* MaterialInterface = Cast<UMaterialInterface>(Material);
 	
 	FActorDescriptor& ActorDescriptor = ActorInstanceDescriptors[ToPaint];
@@ -59,6 +79,8 @@ void FClassManager::PaintActor(const AActor* ToPaint, UMaterialInstanceConstant*
 
 void FClassManager::RestoreAll()
 {
+	auto& ActorInstanceDescriptors = GetCurrentWorldDescriptor().ActorInstanceDescriptors;
+	
 	for (TTuple<AActor*, FActorDescriptor>& ActorTuple : ActorInstanceDescriptors)
 	{
 		FActorDescriptor& ActorDescriptor = ActorTuple.Value;
@@ -72,6 +94,13 @@ void FClassManager::RestoreAll()
 				Component->SetMaterial(mi, ComponentDescriptor.MaterialInterfaces[mi]);
 		}
 	}
+}
+
+void FClassManager::Clear()
+{
+	auto& ActorInstanceDescriptors = GetCurrentWorldDescriptor().ActorInstanceDescriptors;
+
+	ActorInstanceDescriptors.Empty(ActorInstanceDescriptors.Num());
 }
 
 UMaterialInstanceConstant* FClassManager::GetSemanticClassMaterial(FSemanticClass& SemanticClass)

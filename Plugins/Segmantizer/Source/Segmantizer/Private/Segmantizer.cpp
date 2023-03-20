@@ -54,19 +54,22 @@ void FSegmantizerModule::Save()
 
 void FSegmantizerModule::CaptureStart(float CaptureDelay)
 {
-	const FCaptureRequest SemanticRequest{ "Semantic", FRequestDelegate::CreateRaw(this, &FSegmantizerModule::SetViewToSemantic) };
-	CaptureQueue.Enqueue(SemanticRequest);
+	FViewport::SetGameRenderingEnabled(false, 10);
 	
-	const FCaptureRequest LitRequest{ "Lit", FRequestDelegate::CreateRaw(this, &FSegmantizerModule::SetViewToLit) };
+	const FDateTime Now = FDateTime::Now();
+
+	const FCaptureRequest LitRequest{ "Lit", Now, FRequestDelegate::CreateRaw(this, &FSegmantizerModule::SetViewToLit) };
 	CaptureQueue.Enqueue(LitRequest);
+	
+	const FCaptureRequest SemanticRequest{ "Semantic", Now, FRequestDelegate::CreateRaw(this, &FSegmantizerModule::SetViewToSemantic) };
+	CaptureQueue.Enqueue(SemanticRequest);
 
 	TickDelegateHandle = FTSTicker::GetCoreTicker().AddTicker(TickDelegate, CaptureDelay);
 }
 
-void FSegmantizerModule::ShotCapture(const FString& Filename)
+void FSegmantizerModule::ShotCapture(const FString& Filename, const FDateTime& DateTime)
 {
-	const FDateTime Now = FDateTime::Now();
-	const FString NowStr = FString::Printf(TEXT("%d.%02d.%02d-%02d.%02d.%02d.%03d"), Now.GetYear(), Now.GetMonth(), Now.GetDay(), Now.GetHour(), Now.GetMinute(), Now.GetSecond(), Now.GetMillisecond());
+	const FString NowStr = FString::Printf(TEXT("%d.%02d.%02d-%02d.%02d.%02d.%03d"), DateTime.GetYear(), DateTime.GetMonth(), DateTime.GetDay(), DateTime.GetHour(), DateTime.GetMinute(), DateTime.GetSecond(), DateTime.GetMillisecond());
 
 	FScreenshotRequest::RequestScreenshot(Filename + NowStr, false, false);
 }
@@ -83,14 +86,15 @@ bool FSegmantizerModule::CaptureLoop(float DeltaTime)
 	if (CaptureRequest.CaptureDelegate.IsBound())
 		CaptureRequest.CaptureDelegate.Execute();
 
-	ShotCapture(CaptureRequest.Filename);
+	ShotCapture(CaptureRequest.Filename, CaptureRequest.DateTime);
 
 	return true;
 }
 
 void FSegmantizerModule::CaptureEnd()
 {
-	
+	FViewport::SetGameRenderingEnabled(true);
+	ClassManager.RestoreAll();
 }
 
 void FSegmantizerModule::SetViewToSemantic()

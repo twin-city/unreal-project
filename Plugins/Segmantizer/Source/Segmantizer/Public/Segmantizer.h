@@ -21,6 +21,7 @@ class FSegmantizerModule : public IModuleInterface
 	struct FCaptureRequest
 	{
 		FString				Filename;
+		FDateTime			DateTime;
 		FRequestDelegate	CaptureDelegate;
 	};
 	
@@ -28,7 +29,7 @@ class FSegmantizerModule : public IModuleInterface
 	FTickerDelegate TickDelegate;
 	FTSTicker::FDelegateHandle TickDelegateHandle;
 
-	void ShotCapture(const FString& Filename);
+	void ShotCapture(const FString& Filename, const FDateTime& DateTime);
 	
 public:
 	FClassManager ClassManager;
@@ -44,7 +45,7 @@ public:
 
 	void Save();
 
-	void CaptureStart(float CaptureDelay = 0.f);
+	void CaptureStart(float CaptureDelay = 0.25f);
 	
 	bool CaptureLoop(float DeltaTime);
 	void CaptureEnd();
