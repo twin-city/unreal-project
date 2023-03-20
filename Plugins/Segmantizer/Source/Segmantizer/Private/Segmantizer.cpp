@@ -97,10 +97,9 @@ void FSegmantizerModule::SetViewToSemantic()
 {
 	TArray<AActor*> LevelActors;
 
-	if (UEditorEngine *EEngine = Cast<UEditorEngine>(GEngine))
-		UGameplayStatics::GetAllActorsOfClass(EEngine->GetEditorWorldContext().World(), AActor::StaticClass(), LevelActors);
-	else 
-		UGameplayStatics::GetAllActorsOfClass(GEngine->GetWorld(), AActor::StaticClass(), LevelActors);
+	const FWorldContext* WorldContext = GEngine->GetWorldContextFromGameViewport(GEngine->GameViewport);
+	
+	UGameplayStatics::GetAllActorsOfClass(WorldContext->World(), AActor::StaticClass(), LevelActors);
 
 	for (AActor* Actor : LevelActors)
 	{
