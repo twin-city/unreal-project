@@ -25,10 +25,13 @@ class FSegmantizerModule : public IModuleInterface
 		FRequestDelegate	CaptureDelegate;
 	};
 	
+	FCaptureRequest CurrentCapture;
 	TQueue<FCaptureRequest> CaptureQueue;
 	FRequestDelegate RequestDelegate;
 	FDelegateHandle RequestDelegateHandle;
+	FTSTicker::FDelegateHandle TickerDelegateHandle;
 
+	bool ShotTickedCapture(float DeltaTime);
 	void ShotCapture(const FString& Filename, const FDateTime& DateTime);
 	bool UnrollQueue();
 

@@ -44,6 +44,9 @@ void FSegmantizerModule::ShutdownModule()
 {
 	if (RequestDelegateHandle.IsValid())
 		FScreenshotRequest::OnScreenshotRequestProcessed().Remove(RequestDelegateHandle);
+
+	if (TickerDelegateHandle.IsValid())
+		FTSTicker::GetCoreTicker().RemoveTicker(TickerDelegateHandle);
 }
 
 void FSegmantizerModule::Save()
@@ -66,26 +69,37 @@ void FSegmantizerModule::CaptureStart()
 	CaptureLoop();
 }
 
+bool FSegmantizerModule::ShotTickedCapture(float DeltaTime)
+{
+	ShotCapture(CurrentCapture.Filename, CurrentCapture.DateTime);
+
+	return false;
+}
+
 void FSegmantizerModule::ShotCapture(const FString& Filename, const FDateTime& DateTime)
 {
 	const FString NowStr = FString::Printf(TEXT("%d.%02d.%02d-%02d.%02d.%02d.%03d"), DateTime.GetYear(), DateTime.GetMonth(), DateTime.GetDay(), DateTime.GetHour(), DateTime.GetMinute(), DateTime.GetSecond(), DateTime.GetMillisecond());
 
-	FScreenshotRequest::RequestScreenshot(Filename + NowStr, false, false);
+	const FString CompleteName = Filename + NowStr;
+	UWorld* World = GEngine->GetWorldContextFromGameViewport(GEngine->GameViewport)->World();
+	
+	const FString CaptureCommand = FString::Printf(TEXT("HighResShot 2 filename=%ls"), *CompleteName);
+
+	GEngine->Exec(World, *CaptureCommand);
 }
 
 bool FSegmantizerModule::UnrollQueue()
 {
-	FCaptureRequest CaptureRequest;
-	if (!CaptureQueue.Dequeue(CaptureRequest))
+	if (!CaptureQueue.Dequeue(CurrentCapture))
 	{
 		CaptureEnd();
 		return false;
 	}
 
-	if (CaptureRequest.CaptureDelegate.IsBound())
-		CaptureRequest.CaptureDelegate.Execute();
+	if (CurrentCapture.CaptureDelegate.IsBound())
+		CurrentCapture.CaptureDelegate.Execute();
 
-	ShotCapture(CaptureRequest.Filename, CaptureRequest.DateTime);
+	TickerDelegateHandle = FTSTicker::GetCoreTicker().AddTicker(FTickerDelegate::CreateRaw(this, &FSegmantizerModule::ShotTickedCapture), 0);
 
 	return true;
 }
