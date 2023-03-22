@@ -27,9 +27,10 @@ class FSegmantizerModule : public IModuleInterface
 	
 	FCaptureRequest CurrentCapture;
 	TQueue<FCaptureRequest> CaptureQueue;
+	FTickerDelegate TickedDelegate;
 	FRequestDelegate RequestDelegate;
-	FDelegateHandle RequestDelegateHandle;
 	FTSTicker::FDelegateHandle TickerDelegateHandle;
+	FDelegateHandle RequestDelegateHandle;
 
 	bool ShotTickedCapture(float DeltaTime);
 	void ShotCapture(const FString& Filename, const FDateTime& DateTime) const;

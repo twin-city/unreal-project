@@ -38,6 +38,7 @@ public class Segmantizer : ModuleRules
 				"Engine",
 				"Slate",
 				"SlateCore",
+				"LevelEditor",
 				"UnrealEd",
 				"EditorScriptingUtilities",
 			}

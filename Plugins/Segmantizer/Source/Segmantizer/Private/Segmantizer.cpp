@@ -9,6 +9,8 @@
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "Interfaces/IPluginManager.h"
 #include "Slate/SceneViewport.h"
+#include "LevelEditor.h"
+#include "SLevelViewport.h"
 #include "HighResScreenshot.h"
 
 #define LOCTEXT_NAMESPACE "FSegmantizerModule"
@@ -16,6 +18,7 @@
 void FSegmantizerModule::StartupModule()
 {
 	RequestDelegate = FRequestDelegate::CreateRaw(this, &FSegmantizerModule::CaptureLoop);
+	TickedDelegate = FTickerDelegate::CreateRaw(this, &FSegmantizerModule::ShotTickedCapture);
 
 	const FString Directory = TEXT("/Segmantizer");
 
@@ -75,6 +78,14 @@ void FSegmantizerModule::CaptureStart()
 
 	RequestDelegateHandle = FScreenshotRequest::OnScreenshotRequestProcessed().Add(RequestDelegate);
 
+	//if (FModuleManager::Get().IsModuleLoaded("LevelEditor"))
+	//{
+	//	FLevelEditorModule& LevelEditor = FModuleManager::GetModuleChecked<FLevelEditorModule>("LevelEditor");
+	//	SLevelViewport* LevelViewport = LevelEditor.GetFirstActiveLevelViewport().Get();
+	//	if (!LevelViewport->IsInGameView() && LevelViewport->CanToggleGameView())
+	//		LevelViewport->ToggleGameView();
+	//}
+	
 	CaptureLoop();
 }
 
@@ -85,16 +96,36 @@ bool FSegmantizerModule::ShotTickedCapture(float DeltaTime)
 	return false;
 }
 
-void FSegmantizerModule::ShotCapture(const FString& Filename, const FDateTime& DateTime)
+void FSegmantizerModule::ShotCapture(const FString& Filename, const FDateTime& DateTime) const
 {
+	const FString Filepath = "C:/Users/remig/Downloads/Screenshots/";
 	const FString NowStr = FString::Printf(TEXT("%d.%02d.%02d-%02d.%02d.%02d.%03d"), DateTime.GetYear(), DateTime.GetMonth(), DateTime.GetDay(), DateTime.GetHour(), DateTime.GetMinute(), DateTime.GetSecond(), DateTime.GetMillisecond());
 
-	const FString CompleteName = Filename + NowStr;
+	const FString CompletePath = Filepath + Filename + NowStr;
 	UWorld* World = GEngine->GetWorldContextFromGameViewport(GEngine->GameViewport)->World();
-	
-	const FString CaptureCommand = FString::Printf(TEXT("HighResShot 2 filename=%ls"), *CompleteName);
 
-	GEngine->Exec(World, *CaptureCommand);
+	FLevelEditorModule& LevelEditor = FModuleManager::GetModuleChecked<FLevelEditorModule>("LevelEditor");
+	SLevelViewport* LevelViewport = LevelEditor.GetFirstActiveLevelViewport().Get();
+
+	FHighResScreenshotConfig& HighResScreenshotConfig = GetHighResScreenshotConfig();
+	HighResScreenshotConfig.SetResolution(0, 0, 2.f);
+	HighResScreenshotConfig.SetFilename(CompletePath);
+	HighResScreenshotConfig.SetMaskEnabled(false);
+	HighResScreenshotConfig.SetHDRCapture(false);
+
+	LevelViewport->GetActiveViewport()->TakeHighResScreenShot();
+	
+	//UGameViewportClient* GameViewport = World->GetGameViewport();
+	//FViewport* Viewport = GameViewport->GetGameViewport();
+	//
+	//FHighResScreenshotConfig& HighResScreenshotConfig = GetHighResScreenshotConfig();
+	//HighResScreenshotConfig.SetResolution(Viewport->GetSizeXY().X, Viewport->GetSizeXY().Y, 2.f);
+	//HighResScreenshotConfig.SetFilename(CompletePath);
+	//
+	//Viewport->TakeHighResScreenShot();
+	
+	//const FString CaptureCommand = FString::Printf(TEXT("HighResShot 2 filename=%ls"), *CompletePath);
+	//GEngine->Exec(World, *CaptureCommand);
 }
 
 bool FSegmantizerModule::UnrollQueue()
@@ -108,7 +139,7 @@ bool FSegmantizerModule::UnrollQueue()
 	if (CurrentCapture.CaptureDelegate.IsBound())
 		CurrentCapture.CaptureDelegate.Execute();
 
-	TickerDelegateHandle = FTSTicker::GetCoreTicker().AddTicker(FTickerDelegate::CreateRaw(this, &FSegmantizerModule::ShotTickedCapture), 0);
+	TickerDelegateHandle = FTSTicker::GetCoreTicker().AddTicker(TickedDelegate, 0);
 
 	return true;
 }
