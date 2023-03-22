@@ -19,9 +19,9 @@ void USegmantizerBPLibrary::SetViewToLit()
 	FModuleManager::Get().GetModuleChecked<FSegmantizerModule>("Segmantizer").SetViewToLit();
 }
 
-void USegmantizerBPLibrary::Save()
+void USegmantizerBPLibrary::SaveClassDataAsset()
 {
-	FModuleManager::Get().GetModuleChecked<FSegmantizerModule>("Segmantizer").Save();
+	FModuleManager::Get().GetModuleChecked<FSegmantizerModule>("Segmantizer").SaveClassDataAsset();
 }
 
 void USegmantizerBPLibrary::Capture()

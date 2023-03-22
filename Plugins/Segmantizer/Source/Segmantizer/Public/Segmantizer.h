@@ -32,9 +32,12 @@ class FSegmantizerModule : public IModuleInterface
 	FTSTicker::FDelegateHandle TickerDelegateHandle;
 
 	bool ShotTickedCapture(float DeltaTime);
-	void ShotCapture(const FString& Filename, const FDateTime& DateTime);
+	void ShotCapture(const FString& Filename, const FDateTime& DateTime) const;
 	bool UnrollQueue();
 
+	bool LoadClassDataAsset(const FString& Filepath);
+	void CreateClassDataAsset(const FString& Directory, const FString& Filename);
+	
 public:
 	FClassManager ClassManager;
 	
@@ -47,7 +50,7 @@ public:
 	void SetViewToSemantic();
 	void SetViewToLit();
 
-	void Save();
+	void SaveClassDataAsset() const;
 
 	void CaptureStart();
 	

@@ -38,5 +38,5 @@ public:
 	static void SetViewToLit();
 
 	UFUNCTION(BlueprintCallable)
-	static void Save();
+	static void SaveClassDataAsset();
 };

@@ -8,36 +8,45 @@
 #include "EditorAssetLibrary.h"
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "Interfaces/IPluginManager.h"
+#include "Slate/SceneViewport.h"
+#include "HighResScreenshot.h"
 
 #define LOCTEXT_NAMESPACE "FSegmantizerModule"
 
 void FSegmantizerModule::StartupModule()
 {
 	RequestDelegate = FRequestDelegate::CreateRaw(this, &FSegmantizerModule::CaptureLoop);
-	
+
 	const FString Directory = TEXT("/Segmantizer");
 
-	const FString FileName = "SemanticClassMap";
+	const FString Filename = "SemanticClassMap";
 
-	const FString Filepath = Directory / FileName;
-	
+	if (!LoadClassDataAsset(Directory / Filename))
+		CreateClassDataAsset(Directory, Filename);
+}
+
+bool FSegmantizerModule::LoadClassDataAsset(const FString& Filepath)
+{
 	ClassDataAsset = LoadObject<UClassMappingAsset>(nullptr, *Filepath);
+	return ClassDataAsset != nullptr;
+}
 
-	if (!ClassDataAsset)
-	{
-		// Register the plugin directory with the editor
-		const FAssetRegistryModule& AssetRegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
-		AssetRegistryModule.Get().AddPath(*Directory);
+void FSegmantizerModule::CreateClassDataAsset(const FString& Directory, const FString& Filename)
+{
+	// Register the plugin directory with the editor
+	const FAssetRegistryModule& AssetRegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
+	AssetRegistryModule.Get().AddPath(*Directory);
+
+	const FString Filepath = Directory / Filename;
+	
+	// Create and populate the asset
+	UPackage *ClassMappingPackage = CreatePackage(*Filepath);
 		
-		// Create and populate the asset
-		UPackage *ClassMappingPackage = CreatePackage(*Filepath);
-		
-		ClassDataAsset = NewObject<UClassMappingAsset>(
-			ClassMappingPackage,
-			UClassMappingAsset::StaticClass(),
-			*FileName,
-			EObjectFlags::RF_Public | EObjectFlags::RF_Standalone);
-	}
+	ClassDataAsset = NewObject<UClassMappingAsset>(
+		ClassMappingPackage,
+		UClassMappingAsset::StaticClass(),
+		*Filename,
+		EObjectFlags::RF_Public | EObjectFlags::RF_Standalone);
 }
 
 void FSegmantizerModule::ShutdownModule()
@@ -49,7 +58,7 @@ void FSegmantizerModule::ShutdownModule()
 		FTSTicker::GetCoreTicker().RemoveTicker(TickerDelegateHandle);
 }
 
-void FSegmantizerModule::Save()
+void FSegmantizerModule::SaveClassDataAsset() const
 {
 	UEditorAssetLibrary::SaveLoadedAsset(ClassDataAsset, false);
 }
@@ -130,15 +139,15 @@ void FSegmantizerModule::SetViewToSemantic()
 		if (!ClassNamePtr)
 			ClassNamePtr = ClassDataAsset->ActorClassToClassName.Find(Actor->GetClass());
 
-		if (ClassNamePtr)
-		{
-			ClassManager.AddUniqueActorInstance(Actor);
-			
-			FSemanticClass& SemanticClass = ClassDataAsset->SemanticClasses[*ClassNamePtr];
+		if (!ClassNamePtr)
+			continue;
+		
+		ClassManager.AddUniqueActorInstance(Actor);
+		
+		FSemanticClass& SemanticClass = ClassDataAsset->SemanticClasses[*ClassNamePtr];
 
-			UMaterialInstanceConstant* Material = ClassManager.GetSemanticClassMaterial(SemanticClass);
-			ClassManager.PaintActor(Actor, Material);
-		}
+		UMaterialInstanceConstant* Material = ClassManager.GetSemanticClassMaterial(SemanticClass);
+		ClassManager.PaintActor(Actor, Material);
 	}
 }
 
