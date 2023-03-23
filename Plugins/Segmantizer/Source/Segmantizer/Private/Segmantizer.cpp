@@ -97,12 +97,20 @@ bool FSegmantizerModule::ShotTickedCapture(float DeltaTime)
 
 void FSegmantizerModule::ShotCapture(const FString& Filename, const FDateTime& DateTime) const
 {
-	const FString Filepath = "C:/Users/remig/Downloads/Screenshots/";
-	const FString NowStr = FString::Printf(TEXT("%d.%02d.%02d-%02d.%02d.%02d.%03d"), DateTime.GetYear(), DateTime.GetMonth(), DateTime.GetDay(), DateTime.GetHour(), DateTime.GetMinute(), DateTime.GetSecond(), DateTime.GetMillisecond());
+	const FString NowStr = FString::Printf(TEXT("%d-%02d-%02d-%02d-%02d-%02d-%03d"), DateTime.GetYear(), DateTime.GetMonth(), DateTime.GetDay(), DateTime.GetHour(), DateTime.GetMinute(), DateTime.GetSecond(), DateTime.GetMillisecond());
 
-	const FString CompletePath = Filepath + Filename + NowStr;
+	const FString CompleteName = Filename + NowStr;
 	
-	FScreenshotRequest::RequestScreenshot(CompletePath, false, true);
+	const FString Filepath = "";
+	const FString CompletePath = Filepath + CompleteName;
+
+	FHighResScreenshotConfig& HighResConfig = GetHighResScreenshotConfig();
+	HighResConfig.SetResolution(0, 0);
+	HighResConfig.SetFilename(CompletePath);
+	HighResConfig.SetMaskEnabled(false);
+	HighResConfig.bDateTimeBasedNaming = false;
+	
+	FScreenshotRequest::RequestScreenshot(CompletePath, false, false);
 }
 
 bool FSegmantizerModule::UnrollQueue()
