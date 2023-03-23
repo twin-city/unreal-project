@@ -14,17 +14,17 @@
 
 #define LOCTEXT_NAMESPACE "FSegmantizerModule"
 
+const FString ModuleDirectory = TEXT("/Segmantizer");
+
 void FSegmantizerModule::StartupModule()
 {
 	RequestDelegate = FRequestDelegate::CreateRaw(this, &FSegmantizerModule::CaptureLoop);
 	TickedDelegate = FTickerDelegate::CreateRaw(this, &FSegmantizerModule::ShotTickedCapture);
 
-	const FString Directory = TEXT("/Segmantizer");
 
-	const FString Filename = "SemanticClassMap";
-
-	if (!LoadClassDataAsset(Directory / Filename))
-		CreateClassDataAsset(Directory, Filename);
+	// Register the plugin directory with the editor
+	const FAssetRegistryModule& AssetRegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
+	AssetRegistryModule.Get().AddPath(*ModuleDirectory);
 }
 
 bool FSegmantizerModule::LoadClassDataAsset(const FString& Filepath)
@@ -35,10 +35,6 @@ bool FSegmantizerModule::LoadClassDataAsset(const FString& Filepath)
 
 void FSegmantizerModule::CreateClassDataAsset(const FString& Directory, const FString& Filename)
 {
-	// Register the plugin directory with the editor
-	const FAssetRegistryModule& AssetRegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
-	AssetRegistryModule.Get().AddPath(*Directory);
-
 	const FString Filepath = Directory / Filename;
 	
 	// Create and populate the asset
@@ -49,6 +45,19 @@ void FSegmantizerModule::CreateClassDataAsset(const FString& Directory, const FS
 		UClassMappingAsset::StaticClass(),
 		*Filename,
 		EObjectFlags::RF_Public | EObjectFlags::RF_Standalone);
+}
+
+UClassMappingAsset* FSegmantizerModule::GetClassDataAsset()
+{
+	if (ClassDataAsset)
+		return ClassDataAsset;
+
+	const FString Filename = "SemanticClassMap";
+	
+	if (!LoadClassDataAsset(ModuleDirectory / Filename))
+		CreateClassDataAsset(ModuleDirectory, Filename);
+
+	return ClassDataAsset;
 }
 
 void FSegmantizerModule::ShutdownModule()
@@ -62,7 +71,8 @@ void FSegmantizerModule::ShutdownModule()
 
 void FSegmantizerModule::SaveClassDataAsset() const
 {
-	UEditorAssetLibrary::SaveLoadedAsset(ClassDataAsset, false);
+	if (ClassDataAsset)
+		UEditorAssetLibrary::SaveLoadedAsset(ClassDataAsset, false);
 }
 
 void FSegmantizerModule::CaptureStart()
@@ -77,14 +87,6 @@ void FSegmantizerModule::CaptureStart()
 
 	RequestDelegateHandle = FScreenshotRequest::OnScreenshotRequestProcessed().Add(RequestDelegate);
 
-	//if (FModuleManager::Get().IsModuleLoaded("LevelEditor"))
-	//{
-	//	FLevelEditorModule& LevelEditor = FModuleManager::GetModuleChecked<FLevelEditorModule>("LevelEditor");
-	//	SLevelViewport* LevelViewport = LevelEditor.GetFirstActiveLevelViewport().Get();
-	//	if (!LevelViewport->IsInGameView() && LevelViewport->CanToggleGameView())
-	//		LevelViewport->ToggleGameView();
-	//}
-	
 	CaptureLoop();
 }
 
@@ -148,19 +150,21 @@ void FSegmantizerModule::SetViewToSemantic()
 	
 	UGameplayStatics::GetAllActorsOfClass(WorldContext->World(), AActor::StaticClass(), LevelActors);
 
+	UClassMappingAsset* CurrentClassData = GetClassDataAsset();
+	
 	for (AActor* Actor : LevelActors)
 	{
-		const FString* ClassNamePtr = ClassDataAsset->ActorInstanceToClassName.Find(Actor->GetActorGuid());
+		const FString* ClassNamePtr = CurrentClassData->ActorInstanceToClassName.Find(Actor->GetActorGuid());
 		
 		if (!ClassNamePtr)
-			ClassNamePtr = ClassDataAsset->ActorClassToClassName.Find(Actor->GetClass());
+			ClassNamePtr = CurrentClassData->ActorClassToClassName.Find(Actor->GetClass());
 
 		if (!ClassNamePtr)
 			continue;
 		
 		ClassManager.AddUniqueActorInstance(Actor);
 		
-		FSemanticClass& SemanticClass = ClassDataAsset->SemanticClasses[*ClassNamePtr];
+		FSemanticClass& SemanticClass = CurrentClassData->SemanticClasses[*ClassNamePtr];
 
 		UMaterialInstanceConstant* Material = ClassManager.GetSemanticClassMaterial(SemanticClass);
 		ClassManager.PaintActor(Actor, Material);

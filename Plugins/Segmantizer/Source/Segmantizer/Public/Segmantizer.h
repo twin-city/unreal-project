@@ -18,6 +18,8 @@ class FSegmantizerModule : public IModuleInterface
 {
 	DECLARE_DELEGATE(FRequestDelegate);
 	
+	class UClassMappingAsset* ClassDataAsset = nullptr;
+
 	struct FCaptureRequest
 	{
 		FString				Filename;
@@ -41,8 +43,8 @@ class FSegmantizerModule : public IModuleInterface
 	
 public:
 	FClassManager ClassManager;
-	
-	class UClassMappingAsset* ClassDataAsset = nullptr;
+
+	UClassMappingAsset* GetClassDataAsset();
 	
 	/** IModuleInterface implementation */
 	virtual void StartupModule() override;
