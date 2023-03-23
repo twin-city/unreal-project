@@ -9,7 +9,6 @@
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "Interfaces/IPluginManager.h"
 #include "Slate/SceneViewport.h"
-#include "LevelEditor.h"
 #include "SLevelViewport.h"
 #include "HighResScreenshot.h"
 
@@ -102,30 +101,8 @@ void FSegmantizerModule::ShotCapture(const FString& Filename, const FDateTime& D
 	const FString NowStr = FString::Printf(TEXT("%d.%02d.%02d-%02d.%02d.%02d.%03d"), DateTime.GetYear(), DateTime.GetMonth(), DateTime.GetDay(), DateTime.GetHour(), DateTime.GetMinute(), DateTime.GetSecond(), DateTime.GetMillisecond());
 
 	const FString CompletePath = Filepath + Filename + NowStr;
-	UWorld* World = GEngine->GetWorldContextFromGameViewport(GEngine->GameViewport)->World();
-
-	FLevelEditorModule& LevelEditor = FModuleManager::GetModuleChecked<FLevelEditorModule>("LevelEditor");
-	SLevelViewport* LevelViewport = LevelEditor.GetFirstActiveLevelViewport().Get();
-
-	FHighResScreenshotConfig& HighResScreenshotConfig = GetHighResScreenshotConfig();
-	HighResScreenshotConfig.SetResolution(0, 0, 2.f);
-	HighResScreenshotConfig.SetFilename(CompletePath);
-	HighResScreenshotConfig.SetMaskEnabled(false);
-	HighResScreenshotConfig.SetHDRCapture(false);
-
-	LevelViewport->GetActiveViewport()->TakeHighResScreenShot();
 	
-	//UGameViewportClient* GameViewport = World->GetGameViewport();
-	//FViewport* Viewport = GameViewport->GetGameViewport();
-	//
-	//FHighResScreenshotConfig& HighResScreenshotConfig = GetHighResScreenshotConfig();
-	//HighResScreenshotConfig.SetResolution(Viewport->GetSizeXY().X, Viewport->GetSizeXY().Y, 2.f);
-	//HighResScreenshotConfig.SetFilename(CompletePath);
-	//
-	//Viewport->TakeHighResScreenShot();
-	
-	//const FString CaptureCommand = FString::Printf(TEXT("HighResShot 2 filename=%ls"), *CompletePath);
-	//GEngine->Exec(World, *CaptureCommand);
+	FScreenshotRequest::RequestScreenshot(CompletePath, false, true);
 }
 
 bool FSegmantizerModule::UnrollQueue()
