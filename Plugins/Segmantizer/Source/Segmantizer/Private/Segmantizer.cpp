@@ -5,6 +5,7 @@
 #include "ClassManager.h"
 #include "ClassMappingAsset.h"
 #include "Kismet/GameplayStatics.h"
+#include "Engine/AssetManager.h"
 #include "EditorAssetLibrary.h"
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "Interfaces/IPluginManager.h"
@@ -29,7 +30,9 @@ void FSegmantizerModule::StartupModule()
 
 bool FSegmantizerModule::LoadClassDataAsset(const FString& Filepath)
 {
-	ClassDataAsset = LoadObject<UClassMappingAsset>(nullptr, *Filepath);
+	UObject* LoadedAsset = UAssetManager::GetStreamableManager().LoadSynchronous(Filepath);
+
+	ClassDataAsset = Cast<UClassMappingAsset>(LoadedAsset);
 	return ClassDataAsset != nullptr;
 }
 

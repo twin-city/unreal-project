@@ -4,11 +4,12 @@
 #include "Materials/MaterialInstanceConstant.h"
 #include "Factories/MaterialInstanceConstantFactoryNew.h"
 #include "ClassMappingAsset.h"
+#include "EditorAssetLibrary.h"
+#include "Engine/AssetManager.h"
 
 FClassManager::FClassManager()
 {
-	UMaterial* AssetMaterial = LoadObject<UMaterial>(nullptr, *FString("/Segmantizer/SemanticMaterial"));
-	SemanticMaterial = DuplicateObject<UMaterial>(AssetMaterial, nullptr);
+	SemanticMaterial = LoadObject<UMaterial>(nullptr, *FString("/Segmantizer/SemanticMaterial"));
 }
 
 FWorldDescriptor& FClassManager::GetCurrentWorldDescriptor()
@@ -107,30 +108,38 @@ UMaterialInstanceConstant* FClassManager::GetSemanticClassMaterial(FSemanticClas
 {
 	if (SemanticClass.PlainColorMaterialInstance)
 		return SemanticClass.PlainColorMaterialInstance;
-		
-	UMaterialInstanceConstantFactoryNew* Factory = NewObject<UMaterialInstanceConstantFactoryNew>();
-	Factory->InitialParent = SemanticMaterial;
 
 	const FString PackageFileName = FString::Printf(TEXT("MI_%s"), *(SemanticClass.Name));
 	const FString PackagePath = TEXT("/Segmantizer/ConstMaterials") / PackageFileName;
+
+	UObject* LoadedAsset = UAssetManager::GetStreamableManager().LoadSynchronous(PackagePath);
+
+	if (UMaterialInstanceConstant* InstanceConstant = Cast<UMaterialInstanceConstant>(LoadedAsset))
+		return SemanticClass.PlainColorMaterialInstance = InstanceConstant;
+	
+	UMaterialInstanceConstantFactoryNew* Factory = NewObject<UMaterialInstanceConstantFactoryNew>();
+	Factory->InitialParent = SemanticMaterial;
 	
 	UPackage* Package = CreatePackage(*PackagePath);
-	
-	SemanticClass.PlainColorMaterialInstance = Cast<UMaterialInstanceConstant>(Factory->FactoryCreateNew(
+
+	UMaterialInstanceConstant* NewInstanceConstant = Cast<UMaterialInstanceConstant>(Factory->FactoryCreateNew(
 		UMaterialInstanceConstant::StaticClass(),
 		Package,
 		*PackageFileName,
-		RF_Public | RF_Transient,
+		RF_Public | RF_Standalone,
 		nullptr,
 		GWarn));
+	
+	NewInstanceConstant->SetVectorParameterValueEditorOnly(TEXT("SemanticColor"), SemanticClass.Color);
+	UEditorAssetLibrary::SaveLoadedAsset(NewInstanceConstant, false);
 
+	SemanticClass.PlainColorMaterialInstance = NewInstanceConstant;
+	
 	if (!SemanticClass.PlainColorMaterialInstance)
 	{
 		UE_LOG(LogTemp, Error, TEXT("%s: Could not create the plain color material instance"), *FString(__FUNCTION__))
 		check(SemanticClass.PlainColorMaterialInstance)
 	}
-	
-	SemanticClass.PlainColorMaterialInstance->SetVectorParameterValueEditorOnly(TEXT("SemanticColor"), SemanticClass.Color);
 
 	return SemanticClass.PlainColorMaterialInstance;
 }
