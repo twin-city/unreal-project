@@ -20,7 +20,6 @@ const FString FSegmantizerModule::ModuleDirectory = TEXT("/Segmantizer");
 void FSegmantizerModule::StartupModule()
 {
 	RequestDelegate = FRequestDelegate::CreateRaw(this, &FSegmantizerModule::CaptureLoop);
-	TickedDelegate = FTickerDelegate::CreateRaw(this, &FSegmantizerModule::ShotTickedCapture);
 
 	// Register the plugin directory with the editor
 	const FAssetRegistryModule& AssetRegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
@@ -66,9 +65,6 @@ void FSegmantizerModule::ShutdownModule()
 {
 	if (RequestDelegateHandle.IsValid())
 		FScreenshotRequest::OnScreenshotRequestProcessed().Remove(RequestDelegateHandle);
-
-	if (TickerDelegateHandle.IsValid())
-		FTSTicker::GetCoreTicker().RemoveTicker(TickerDelegateHandle);
 }
 
 void FSegmantizerModule::SaveClassDataAsset() const
@@ -92,13 +88,6 @@ void FSegmantizerModule::CaptureStart()
 	CaptureLoop();
 }
 
-bool FSegmantizerModule::ShotTickedCapture(float DeltaTime)
-{
-	ShotCapture(CurrentCapture.Filename, CurrentCapture.DateTime);
-
-	return false;
-}
-
 void FSegmantizerModule::ShotCapture(const FString& Filename, const FDateTime& DateTime) const
 {
 	const FString NowStr = FString::Printf(TEXT("%d-%02d-%02d-%02d-%02d-%02d-%03d"), DateTime.GetYear(), DateTime.GetMonth(), DateTime.GetDay(), DateTime.GetHour(), DateTime.GetMinute(), DateTime.GetSecond(), DateTime.GetMillisecond());
@@ -119,22 +108,27 @@ void FSegmantizerModule::ShotCapture(const FString& Filename, const FDateTime& D
 
 bool FSegmantizerModule::UnrollQueue()
 {
+	FCaptureRequest CurrentCapture;
 	if (!CaptureQueue.Dequeue(CurrentCapture))
 	{
 		CaptureEnd();
+
+		// Return false to stop the loop
 		return false;
 	}
 
 	if (CurrentCapture.CaptureDelegate.IsBound())
 		CurrentCapture.CaptureDelegate.Execute();
 
-	TickerDelegateHandle = FTSTicker::GetCoreTicker().AddTicker(TickedDelegate, 0);
+	ShotCapture(CurrentCapture.Filename, CurrentCapture.DateTime);
 
+	// Return true to continue the loop
 	return true;
 }
 
 void FSegmantizerModule::CaptureLoop()
 {
+	// Called each time a Screenshot is processed 
 	if (!UnrollQueue())
 		FScreenshotRequest::OnScreenshotRequestProcessed().Remove(RequestDelegateHandle);
 }
@@ -146,24 +140,27 @@ void FSegmantizerModule::CaptureEnd()
 
 void FSegmantizerModule::SetViewToSemantic()
 {
-	TArray<AActor*> LevelActors;
-
+	UClassMappingAsset* CurrentClassData = GetClassDataAsset();
+	
 	const FWorldContext* WorldContext = GEngine->GetWorldContextFromGameViewport(GEngine->GameViewport);
 	
+	TArray<AActor*> LevelActors;
 	UGameplayStatics::GetAllActorsOfClass(WorldContext->World(), AActor::StaticClass(), LevelActors);
-
-	UClassMappingAsset* CurrentClassData = GetClassDataAsset();
 	
 	for (AActor* Actor : LevelActors)
 	{
+		// Get class name from actor instance
 		const FString* ClassNamePtr = CurrentClassData->ActorInstanceToClassName.Find(Actor->GetActorGuid());
-		
+
+		// Else get class name from actor class
 		if (!ClassNamePtr)
 			ClassNamePtr = CurrentClassData->ActorClassToClassName.Find(Actor->GetClass());
 
 		if (!ClassNamePtr)
 			continue;
-		
+
+		// Register the actor instance with the ClassManager
+		// TODO: Split the registering between actor instances and actor classes to speed up the restoration
 		ClassManager.AddUniqueActorInstance(Actor);
 		
 		FSemanticClass& SemanticClass = CurrentClassData->SemanticClasses[*ClassNamePtr];

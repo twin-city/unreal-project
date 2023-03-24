@@ -15,7 +15,6 @@ const FString ParentMaterialName = TEXT("SemanticMaterial");
 
 FClassManager::FClassManager()
 {
-	
 	SemanticMaterial = LoadObject<UMaterial>(nullptr, *(FSegmantizerModule::ModuleDirectory / ParentMaterialName));
 }
 
@@ -75,6 +74,7 @@ void FClassManager::PaintActor(const AActor* ToPaint, UMaterialInstanceConstant*
 		UPrimitiveComponent* Component = CompTuple.Key;
 		FComponentDescriptor& ComponentDescriptor = CompTuple.Value;
 
+		// Set all the materials of each Component with the semantic material instance
 		for (int mi = 0; mi < ComponentDescriptor.MaterialInterfaces.Num(); mi++)
 			Component->SetMaterial(mi, MaterialInterface);
 	}
