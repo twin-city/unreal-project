@@ -5,11 +5,18 @@
 #include "Factories/MaterialInstanceConstantFactoryNew.h"
 #include "ClassMappingAsset.h"
 #include "EditorAssetLibrary.h"
+#include "Segmantizer.h"
 #include "Engine/AssetManager.h"
+
+const FString MaterialFormat = TEXT("MI_{0}");
+const FString ColorParameterName = TEXT("SemanticColor");
+const FString MaterialsPath = TEXT("/Segmantizer/ConstMaterials");
+const FString ParentMaterialName = TEXT("SemanticMaterial");
 
 FClassManager::FClassManager()
 {
-	SemanticMaterial = LoadObject<UMaterial>(nullptr, *FString("/Segmantizer/SemanticMaterial"));
+	
+	SemanticMaterial = LoadObject<UMaterial>(nullptr, *(FSegmantizerModule::ModuleDirectory / ParentMaterialName));
 }
 
 FWorldDescriptor& FClassManager::GetCurrentWorldDescriptor()
@@ -42,18 +49,13 @@ void FClassManager::AddActorInstance(AActor* ActorInstance)
 
 void FClassManager::AddUniqueActorInstance(AActor* ActorInstance)
 {
-	auto& ActorInstanceDescriptors = GetCurrentWorldDescriptor().ActorInstanceDescriptors;
+	const FWorldDescriptor& WorldDescriptor = GetCurrentWorldDescriptor();
 
-	if (!ActorInstanceDescriptors.Contains(ActorInstance))
+	if (!WorldDescriptor.ActorInstanceDescriptors.Contains(ActorInstance))
 		AddActorInstance(ActorInstance);
 }
 
-void FClassManager::RemoveActorInstance(AActor* ActorInstance)
-{
-	RemoveActorConstInstance(ActorInstance);
-}
-
-void FClassManager::RemoveActorConstInstance(const AActor* ActorInstance)
+void FClassManager::RemoveActorInstance(const AActor* ActorInstance)
 {
 	auto& ActorInstanceDescriptors = GetCurrentWorldDescriptor().ActorInstanceDescriptors;
 
@@ -91,6 +93,7 @@ void FClassManager::RestoreAll()
 			UPrimitiveComponent* Component = CompTuple.Key;
 			FComponentDescriptor& ComponentDescriptor = CompTuple.Value;
 
+			// Set back all materials of the current PrimitiveComponent
 			for (int mi = 0; mi < ComponentDescriptor.MaterialInterfaces.Num(); mi++)
 				Component->SetMaterial(mi, ComponentDescriptor.MaterialInterfaces[mi]);
 		}
@@ -104,18 +107,21 @@ void FClassManager::Clear()
 	ActorInstanceDescriptors.Empty(ActorInstanceDescriptors.Num());
 }
 
-UMaterialInstanceConstant* FClassManager::GetSemanticClassMaterial(FSemanticClass& SemanticClass)
+UMaterialInstanceConstant* FClassManager::LoadSemanticClassMaterial(FSemanticClass& SemanticClass) const
 {
-	if (SemanticClass.PlainColorMaterialInstance)
-		return SemanticClass.PlainColorMaterialInstance;
-
-	const FString PackageFileName = FString::Printf(TEXT("MI_%s"), *(SemanticClass.Name));
-	const FString PackagePath = TEXT("/Segmantizer/ConstMaterials") / PackageFileName;
-
+	const FString PackageName = FString::Format(*MaterialFormat, { SemanticClass.Name });
+	const FString PackagePath = MaterialsPath / PackageName;
+	
 	UObject* LoadedAsset = UAssetManager::GetStreamableManager().LoadSynchronous(PackagePath);
 
-	if (UMaterialInstanceConstant* InstanceConstant = Cast<UMaterialInstanceConstant>(LoadedAsset))
-		return SemanticClass.PlainColorMaterialInstance = InstanceConstant;
+	// Return the material instance or nullptr
+	return SemanticClass.PlainColorMaterialInstance = Cast<UMaterialInstanceConstant>(LoadedAsset);
+}
+
+UMaterialInstanceConstant* FClassManager::CreateSemanticClassMaterial(FSemanticClass& SemanticClass) const
+{
+	const FString PackageFileName = FString::Format(*MaterialFormat, { SemanticClass.Name });
+	const FString PackagePath = MaterialsPath / PackageFileName;
 	
 	UMaterialInstanceConstantFactoryNew* Factory = NewObject<UMaterialInstanceConstantFactoryNew>();
 	Factory->InitialParent = SemanticMaterial;
@@ -129,11 +135,32 @@ UMaterialInstanceConstant* FClassManager::GetSemanticClassMaterial(FSemanticClas
 		RF_Public | RF_Standalone,
 		nullptr,
 		GWarn));
-	
-	NewInstanceConstant->SetVectorParameterValueEditorOnly(TEXT("SemanticColor"), SemanticClass.Color);
+
+	// Set the material color with the semantic class color
+	NewInstanceConstant->SetVectorParameterValueEditorOnly(*ColorParameterName, SemanticClass.Color);
+
+	// Call PostEditChange to propagate changes to other materials in the chain
+	NewInstanceConstant->PostEditChange();
+
+	// Save the package
 	UEditorAssetLibrary::SaveLoadedAsset(NewInstanceConstant, false);
 
-	SemanticClass.PlainColorMaterialInstance = NewInstanceConstant;
+	return SemanticClass.PlainColorMaterialInstance = NewInstanceConstant;
+}
+
+UMaterialInstanceConstant* FClassManager::GetSemanticClassMaterial(FSemanticClass& SemanticClass) const
+{
+	// If the material is valid, return it
+	if (SemanticClass.PlainColorMaterialInstance)
+		return SemanticClass.PlainColorMaterialInstance;
+
+	// Else try to load it from the asset manager
+	if (UMaterialInstanceConstant* SemanticMaterialInstance = LoadSemanticClassMaterial(SemanticClass))
+		return SemanticMaterialInstance;
+
+	// Else try to create it and save it
+	if (UMaterialInstanceConstant* SemanticMaterialInstance = CreateSemanticClassMaterial(SemanticClass))
+		return SemanticMaterialInstance;
 	
 	if (!SemanticClass.PlainColorMaterialInstance)
 	{
@@ -141,5 +168,5 @@ UMaterialInstanceConstant* FClassManager::GetSemanticClassMaterial(FSemanticClas
 		check(SemanticClass.PlainColorMaterialInstance)
 	}
 
-	return SemanticClass.PlainColorMaterialInstance;
+	return nullptr;
 }

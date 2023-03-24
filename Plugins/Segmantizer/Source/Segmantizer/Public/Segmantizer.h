@@ -59,4 +59,6 @@ public:
 	
 	void CaptureLoop();
 	void CaptureEnd();
+
+	static const FString ModuleDirectory;
 };

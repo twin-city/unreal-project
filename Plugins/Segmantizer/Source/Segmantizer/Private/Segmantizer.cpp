@@ -15,13 +15,12 @@
 
 #define LOCTEXT_NAMESPACE "FSegmantizerModule"
 
-const FString ModuleDirectory = TEXT("/Segmantizer");
+const FString FSegmantizerModule::ModuleDirectory = TEXT("/Segmantizer");
 
 void FSegmantizerModule::StartupModule()
 {
 	RequestDelegate = FRequestDelegate::CreateRaw(this, &FSegmantizerModule::CaptureLoop);
 	TickedDelegate = FTickerDelegate::CreateRaw(this, &FSegmantizerModule::ShotTickedCapture);
-
 
 	// Register the plugin directory with the editor
 	const FAssetRegistryModule& AssetRegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");

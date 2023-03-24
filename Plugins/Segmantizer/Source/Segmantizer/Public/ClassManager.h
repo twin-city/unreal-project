@@ -3,6 +3,9 @@
 #include "CoreMinimal.h"
 #include "ClassManager.generated.h"
 
+struct FSemanticClass;
+class UMaterialInstanceConstant;
+
 // Structure wrapping TArray of static mesh component materials
 USTRUCT()
 struct FComponentDescriptor
@@ -12,7 +15,6 @@ struct FComponentDescriptor
 	UPROPERTY()
 	TArray<UMaterialInterface*> MaterialInterfaces;
 };
-
 
 // Structure wrapping TMap of static mesh components to their original materials
 USTRUCT()
@@ -33,7 +35,6 @@ struct FWorldDescriptor
 	UPROPERTY()
 	TMap<AActor*, FActorDescriptor> ActorInstanceDescriptors;
 };
-
 USTRUCT()
 struct SEGMANTIZER_API FClassManager
 {
@@ -46,18 +47,20 @@ private:
 	UPROPERTY()
 	TMap<UWorld*, FWorldDescriptor> WorldDescriptors;
 
+	UMaterialInstanceConstant* LoadSemanticClassMaterial(FSemanticClass& SemanticClass) const;
+	UMaterialInstanceConstant* CreateSemanticClassMaterial(FSemanticClass& SemanticClass) const;
+	
 public:
 	FClassManager();
 
 	void AddActorInstance(AActor* ActorInstance);
 	void AddUniqueActorInstance(AActor* ActorInstance);
-	void RemoveActorInstance(AActor* ActorInstance);
-	void RemoveActorConstInstance(const AActor* ActorInstance);
-	void PaintActor(const AActor* ToPaint, class UMaterialInstanceConstant* Material);
+	void RemoveActorInstance(const AActor* ActorInstance);
+	void PaintActor(const AActor* ToPaint, UMaterialInstanceConstant* Material);
 	void RestoreAll();
 	void Clear();
 
 	FWorldDescriptor& GetCurrentWorldDescriptor();
 	
-	UMaterialInstanceConstant* GetSemanticClassMaterial(struct FSemanticClass& SemanticClass);
+	UMaterialInstanceConstant* GetSemanticClassMaterial(FSemanticClass& SemanticClass) const;
 };
