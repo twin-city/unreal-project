@@ -39,21 +39,21 @@ In your project, you will need to add:
     └── EasySynth
 ```
 
-#### Demo
+#### 💾 Demo
 
-##### Day and night scenes
+##### 🌙☀️ Day and night scenes
 
 <p align="center">
 	<img src="./demo/DayNight.gif" >
 </p>
 
-##### Weather
+##### 🌧 Weather
 
 <p align="center">
 	<img src="./demo/Weather.gif" >
 </p>
 
-##### Camera angles and semantic views
+##### 📸 Camera angles and semantic views
 
 <p align="center">
 	<img src="./demo/CameraAngle.gif" >
@@ -65,7 +65,7 @@ Semantic views is useful in computer vision to detect objects (pedestrians, buil
 	<img src="./demo/Semantic.gif" >
 </p>
 
-##### Crowd generator
+##### 👥 Crowd generator
 
 <p align="center">
 	<img src="./demo/Crowd.gif" >
@@ -75,7 +75,7 @@ Semantic views is useful in computer vision to detect objects (pedestrians, buil
 	<img src="./demo/MassSpawner.gif" >
 </p>
 
-##### Extractor results
+##### 📊 Extractor results
 
 Once the user has clicked on "Generate", RGB and semantic datas can be found in /d/Snapchot/ folder. Metadatas file describing screenshots (number of vehicles and peds, peds id and RGB, camera rotation/location, weather...) is also created in /d/.
 
