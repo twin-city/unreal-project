@@ -19,7 +19,17 @@
 			"array": "cpp",
 			"vector": "cpp",
 			"xstring": "cpp",
-			"xutility": "cpp"
+			"xutility": "cpp",
+			"*.rh": "cpp",
+			"typeindex": "cpp",
+			"typeinfo": "cpp",
+			"future": "cpp",
+			"system_error": "cpp",
+			"xlocale": "cpp",
+			"atomic": "cpp",
+			"bitset": "cpp",
+			"__locale": "cpp",
+			"thread": "cpp"
 		}
 	},
 	"extensions": {
