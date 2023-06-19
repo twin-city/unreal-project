@@ -48,9 +48,9 @@ struct FMetaDatasStruct
 		
 		UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Data")
 		TMap<int, FString> Peds;
-
-		// UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Data")
-		// FDateTime Date;
+		
+		UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Data")
+		TMap<int, FString> LyingPeds;
 
 };
 
